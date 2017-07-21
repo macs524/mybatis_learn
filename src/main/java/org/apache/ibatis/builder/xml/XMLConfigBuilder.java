@@ -83,6 +83,21 @@ public class XMLConfigBuilder extends BaseBuilder {
     this(new XPathParser(inputStream, true, props, new XMLMapperEntityResolver()), environment, props);
   }
 
+  /**
+   * 构造配置文件解析器，当这个构造函数调用时，parser对象已经完成了对于目标文件的解析，并已经生成了Document对象
+   *
+   * 也就是说，构造完成后，以下事情已经准备就绪
+   *
+   * 1）目标XML已经解析为Document
+   * 2）Configuration 已经初始化
+   * 3）初始化时，默认没有解析
+   *
+   * Document 对象是parser的一个属性
+   *
+   * @param parser parser
+   * @param environment 环境参数，可以为NULL
+   * @param props 配置文件
+   */
   private XMLConfigBuilder(XPathParser parser, String environment, Properties props) {
     super(new Configuration());
     ErrorContext.instance().resource("SQL Mapper Configuration");
@@ -92,7 +107,12 @@ public class XMLConfigBuilder extends BaseBuilder {
     this.parser = parser;
   }
 
+  /**
+   * 进行解析操作，由此进入复杂的解析过程
+   * @return 解析之后，返回负载满满的配置对象
+   */
   public Configuration parse() {
+    //保证只解析一次
     if (parsed) {
       throw new BuilderException("Each XMLConfigBuilder can only be used once.");
     }
@@ -101,12 +121,21 @@ public class XMLConfigBuilder extends BaseBuilder {
     return configuration;
   }
 
+  /**
+   * 执行解析过程
+   * @param root 根节点
+   */
   private void parseConfiguration(XNode root) {
     try {
       //issue #117 read properties first
+
+      //1. 解析属性节点
       propertiesElement(root.evalNode("properties"));
+      //2. 解析配置节点
       Properties settings = settingsAsProperties(root.evalNode("settings"));
+      //3. 设置VFS实现类，如果指定了的话
       loadCustomVfs(settings);
+      //4. 解析别名节点
       typeAliasesElement(root.evalNode("typeAliases"));
       pluginElement(root.evalNode("plugins"));
       objectFactoryElement(root.evalNode("objectFactory"));
@@ -123,13 +152,22 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析配置信息，这个配置信息实际上也就是Configuration中的各个参数，可以不设置，因为有默认值
+   * @param context 目标节点
+   * @return 结果
+   */
   private Properties settingsAsProperties(XNode context) {
     if (context == null) {
       return new Properties();
     }
+
+    //先获取其下的所有参数
     Properties props = context.getChildrenAsProperties();
     // Check that all settings are known to the configuration class
     MetaClass metaConfig = MetaClass.forClass(Configuration.class, localReflectorFactory);
+
+    //说明这里不是随便设置的，每一个必须在Configuration中有对应的设置方法
     for (Object key : props.keySet()) {
       if (!metaConfig.hasSetter(String.valueOf(key))) {
         throw new BuilderException("The setting " + key + " is not known.  Make sure you spelled it correctly (case sensitive).");
@@ -138,6 +176,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     return props;
   }
 
+  //设置自定义的VFS实现类。
   private void loadCustomVfs(Properties props) throws ClassNotFoundException {
     String value = props.getProperty("vfsImpl");
     if (value != null) {
@@ -152,6 +191,12 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析别名配置
+   *
+   *
+   * @param parent
+   */
   private void typeAliasesElement(XNode parent) {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
@@ -214,23 +259,48 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析属性节点，对于Mybatis来说，属性有三种配置方式
+   *
+   * 1）XML中属性节点中直接配置，如：
+   *    <properties>
+   *        <property name='aaa'>bbb</property>
+   *        <property name='a2'>b2</property>
+   *    </properties>
+   * 2) 配置resource或者url节点，指代一个配置文件的路径
+   * 3）直接在代码中进行提供
+   *
+   * 那么很明显，这里只解析那些在XML中配置的，也就是1，和2
+   *
+   * 同名的属性是可以替换的，原则上是后解析的替换前解析的，所以这和解析顺序有关。
+   * @param context
+   * @throws Exception
+   */
   private void propertiesElement(XNode context) throws Exception {
     if (context != null) {
+
+      //1. 解析子属性节点。
       Properties defaults = context.getChildrenAsProperties();
       String resource = context.getStringAttribute("resource");
       String url = context.getStringAttribute("url");
       if (resource != null && url != null) {
         throw new BuilderException("The properties element cannot specify both a URL and a resource based property file reference.  Please specify one or the other.");
       }
+
+      //2. 解析属性文件中的属性，那么很明显，2会替换1的同名变量
       if (resource != null) {
         defaults.putAll(Resources.getResourceAsProperties(resource));
       } else if (url != null) {
         defaults.putAll(Resources.getUrlAsProperties(url));
       }
+
+      //3. 之前代码中添加的，将其取出来放到defaults里，所以，在代码中添加的优先级最高。
       Properties vars = configuration.getVariables();
       if (vars != null) {
         defaults.putAll(vars);
       }
+
+      //重设
       parser.setVariables(defaults);
       configuration.setVariables(defaults);
     }

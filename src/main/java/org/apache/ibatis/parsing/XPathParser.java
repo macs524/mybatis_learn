@@ -206,11 +206,17 @@ public class XPathParser {
     return xnodes;
   }
 
+  /**
+   * 从document中解析指定表达式的节点，并返回XNode
+   * @param expression 表达式
+   * @return 解析后的XNODE
+   */
   public XNode evalNode(String expression) {
     return evalNode(document, expression);
   }
 
   public XNode evalNode(Object root, String expression) {
+    //具体的解析方式我们不深入研究，我们只研究Mybatis对于节点的定义
     Node node = (Node) evaluate(expression, root, XPathConstants.NODE);
     if (node == null) {
       return null;
@@ -226,6 +232,11 @@ public class XPathParser {
     }
   }
 
+  /**
+   * 将目标文件流转化为Document，完成对于XML的解析。
+   * @param inputSource 待解析的对象
+   * @return 解析后的文档
+   */
   private Document createDocument(InputSource inputSource) {
     // important: this must only be called AFTER common constructor
     try {
@@ -263,9 +274,9 @@ public class XPathParser {
 
   /**
    * 设置属性，校验规则，XPATH处理器
-   * @param validation
-   * @param variables
-   * @param entityResolver
+   * @param validation 是否校验
+   * @param variables 属性变量
+   * @param entityResolver  entityResolver ，这个的主要作用是给定一个publicId和SystemId，用于查找其对应的配置文件
    */
   private void commonConstructor(boolean validation, Properties variables, EntityResolver entityResolver) {
     this.validation = validation;

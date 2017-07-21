@@ -27,6 +27,19 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
+ * 可以理解为XNode是原始Node的一种增强。
+ *
+ * 在原始Node上，其还包括了如下一些功能：
+ *
+ * 1）包括对原始节点的引用
+ * 2）存储了节点名
+ * 3）存储了节点中的文本内容（如果有的话）
+ * 4）存储了节点的属性
+ * 5）包括一个解析器的引用
+ * 6）包括原始配置数据的引用
+ *
+ * 那这种节点一方面更强大，另一方面操作起来也更方便
+ *
  * @author Clinton Begin
  */
 public class XNode {
@@ -38,13 +51,19 @@ public class XNode {
   private final Properties variables;
   private final XPathParser xpathParser;
 
+  /**
+   * 创建一个XNode
+   * @param xpathParser 解析器
+   * @param node 节点
+   * @param variables //初始化时的属性配置，可以认为是NULL
+   */
   public XNode(XPathParser xpathParser, Node node, Properties variables) {
     this.xpathParser = xpathParser;
     this.node = node;
-    this.name = node.getNodeName();
+    this.name = node.getNodeName(); //节点名
     this.variables = variables;
-    this.attributes = parseAttributes(node);
-    this.body = parseBody(node);
+    this.attributes = parseAttributes(node); //存储其属性节点中的各个属性名和属性值
+    this.body = parseBody(node); //存储其子节点的文本值，如果有的话。
   }
 
   public XNode newXNode(Node node) {
@@ -213,6 +232,12 @@ public class XNode {
     return getStringAttribute(name, null);
   }
 
+  /**
+   * 由于attributes中存储了节点本身的属性信息，所以取某个属性的值就变得非常简单了。
+   * @param name 属性
+   * @param def 默认值
+   * @return 结果
+   */
   public String getStringAttribute(String name, String def) {
     String value = attributes.getProperty(name);
     if (value == null) {
@@ -301,6 +326,10 @@ public class XNode {
     return children;
   }
 
+  /**
+   * 注意，这里并没有进行变量替换。尤其是没有对VALUE
+   * @return 解析后的结果
+   */
   public Properties getChildrenAsProperties() {
     Properties properties = new Properties();
     for (XNode child : getChildren()) {
@@ -347,19 +376,45 @@ public class XNode {
     return builder.toString();
   }
 
+  /**
+   * 节点的属性信息
+   * @param n 节点
+   * @return 属性集
+   */
   private Properties parseAttributes(Node n) {
     Properties attributes = new Properties();
+
+    //将属性节点转化为属性集
     NamedNodeMap attributeNodes = n.getAttributes();
     if (attributeNodes != null) {
       for (int i = 0; i < attributeNodes.getLength(); i++) {
-        Node attribute = attributeNodes.item(i);
+        Node attribute = attributeNodes.item(i); //每一个属性都是一个属性节点，如 <xx a="a" b="b" />，这里的a和b就是两个属性节点。
+
         String value = PropertyParser.parse(attribute.getNodeValue(), variables);
-        attributes.put(attribute.getNodeName(), value);
+        attributes.put(attribute.getNodeName(), value); //所以这里存储的是解析之后的值
       }
     }
     return attributes;
   }
 
+  /**
+   * 解析节点中的内容， 只处理某个节点中的文本内容
+   * 假设某个节点表示<name>Apple</name>
+   * 则当前节点为<name> , 子节点为text node，值为Apple，
+   * 所以parseBody的话，则返回的应该是Apple.
+   *
+   * 另外这个是不递归的，只要找到就返回，所以对于
+   * <select id = ''>
+   *     SELECT * from
+   *     <if test='tableName != null' >
+   *         ${tableName}
+   *     </if>
+   *     where id = 0
+   * </select>
+   * 其select节点的body值为SELECT * from ，而不包括 where id = 0.
+   * @param node
+   * @return
+   */
   private String parseBody(Node node) {
     String data = getBodyData(node);
     if (data == null) {
@@ -375,6 +430,12 @@ public class XNode {
     return data;
   }
 
+
+  /**
+   * 只处理节点为文本和CDATA的节点
+   * @param child 子节点
+   * @return 结果
+   */
   private String getBodyData(Node child) {
     if (child.getNodeType() == Node.CDATA_SECTION_NODE
         || child.getNodeType() == Node.TEXT_NODE) {

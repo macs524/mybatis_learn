@@ -171,6 +171,9 @@ public class Configuration {
     this.environment = environment;
   }
 
+  /**
+   * 初始化时，便已经内部添加了很多别名
+   */
   public Configuration() {
     typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
     typeAliasRegistry.registerAlias("MANAGED", ManagedTransactionFactory.class);
@@ -201,6 +204,7 @@ public class Configuration {
     typeAliasRegistry.registerAlias("CGLIB", CglibProxyFactory.class);
     typeAliasRegistry.registerAlias("JAVASSIST", JavassistProxyFactory.class);
 
+    //除了别名，还有方言驱动LanguageDriver.
     languageRegistry.setDefaultDriverClass(XMLLanguageDriver.class);
     languageRegistry.register(RawLanguageDriver.class);
   }

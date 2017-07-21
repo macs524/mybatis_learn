@@ -51,12 +51,17 @@ public class XMLMapperEntityResolver implements EntityResolver {
    */
   @Override
   public InputSource resolveEntity(String publicId, String systemId) throws SAXException {
+
+    //重写这个方法的目的，主要是对于指定SYSTEMID的解析，转换为直接读取本地配置文件。
+    //同时，这里还兼容了IBATIS
     try {
       if (systemId != null) {
         String lowerCaseSystemId = systemId.toLowerCase(Locale.ENGLISH);
         if (lowerCaseSystemId.contains(MYBATIS_CONFIG_SYSTEM) || lowerCaseSystemId.contains(IBATIS_CONFIG_SYSTEM)) {
+          //对于配置文件的处理
           return getInputSource(MYBATIS_CONFIG_DTD, publicId, systemId);
         } else if (lowerCaseSystemId.contains(MYBATIS_MAPPER_SYSTEM) || lowerCaseSystemId.contains(IBATIS_MAPPER_SYSTEM)) {
+          //对于MAPPER文件的处理
           return getInputSource(MYBATIS_MAPPER_DTD, publicId, systemId);
         }
       }

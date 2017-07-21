@@ -50,6 +50,12 @@ public class PropertyParser {
     // Prevent Instantiation
   }
 
+  /**
+   * 主要是将参数中的${}里的变量，如果能在variables中找到，则将其替换掉
+   * @param string 解析前的值
+   * @param variables 变量
+   * @return 解析后的值
+   */
   public static String parse(String string, Properties variables) {
     VariableTokenHandler handler = new VariableTokenHandler(variables);
     GenericTokenParser parser = new GenericTokenParser("${", "}", handler);
