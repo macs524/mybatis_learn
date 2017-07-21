@@ -48,6 +48,7 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 
 /**
+ * 这个构造器是解析mybatis配置文件的关键类
  * @author Clinton Begin
  * @author Kazuki Shimizu
  */

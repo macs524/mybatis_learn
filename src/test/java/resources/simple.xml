@@ -1,0 +1,12 @@
+<fruits>
+    <fruit>
+        <id>1</id>
+        <name>apple</name>
+        <price>5.0</price>
+    </fruit>
+    <fruit>
+        <id>2</id>
+        <name>orange</name>
+        <price>3.0</price>
+    </fruit>
+</fruits>

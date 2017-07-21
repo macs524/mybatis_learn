@@ -40,6 +40,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 
 /**
+ * 具体解析XML文件的类
  * @author Clinton Begin
  */
 public class XPathParser {
@@ -254,12 +255,18 @@ public class XPathParser {
         public void warning(SAXParseException exception) throws SAXException {
         }
       });
-      return builder.parse(inputSource);
+      return builder.parse(inputSource); //把字符或字节流解析成为一个Document对象
     } catch (Exception e) {
       throw new BuilderException("Error creating document instance.  Cause: " + e, e);
     }
   }
 
+  /**
+   * 设置属性，校验规则，XPATH处理器
+   * @param validation
+   * @param variables
+   * @param entityResolver
+   */
   private void commonConstructor(boolean validation, Properties variables, EntityResolver entityResolver) {
     this.validation = validation;
     this.entityResolver = entityResolver;
