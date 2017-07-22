@@ -15,11 +15,6 @@
  */
 package org.apache.ibatis.builder;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Pattern;
-
 import org.apache.ibatis.mapping.ParameterMode;
 import org.apache.ibatis.mapping.ResultSetType;
 import org.apache.ibatis.session.Configuration;
@@ -27,6 +22,11 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeAliasRegistry;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * 基础构造器
@@ -113,6 +113,12 @@ public abstract class BaseBuilder {
     }
   }
 
+    /**
+     * 这个方法应用非常广泛, 实际上也说明了别名系统在mybatis中应用是非常广泛的.
+     * 所以我们可以尝试多使用别名
+     * @param alias
+     * @return
+     */
   protected Class<?> resolveClass(String alias) {
     if (alias == null) {
       return null;
@@ -137,14 +143,22 @@ public abstract class BaseBuilder {
     return resolveTypeHandler(javaType, typeHandlerType);
   }
 
+    /**
+     * 解析转换器类型
+     * @param javaType
+     * @param typeHandlerType
+     * @return
+     */
   protected TypeHandler<?> resolveTypeHandler(Class<?> javaType, Class<? extends TypeHandler<?>> typeHandlerType) {
     if (typeHandlerType == null) {
       return null;
     }
     // javaType ignored for injected handlers see issue #746 for full detail
+      //先看大Map中有没有
     TypeHandler<?> handler = typeHandlerRegistry.getMappingTypeHandler(typeHandlerType);
     if (handler == null) {
       // not in registry, create a new one
+        //没有就创建一个.
       handler = typeHandlerRegistry.getInstance(javaType, typeHandlerType);
     }
     return handler;

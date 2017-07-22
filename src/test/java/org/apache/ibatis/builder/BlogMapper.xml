@@ -25,6 +25,8 @@
   <resultMap id="earlyNestedDiscriminatorPost" type="org.apache.ibatis.domain.blog.Post">
     <id property="id" column="post_id"/>
     <result property="subject" column="post_subject"/>
+
+
     <discriminator javaType="int" column="draft">
       <case value="1">
         <association property="author" resultMap="joinedAuthor"/>
@@ -89,9 +91,12 @@
     <association property="author" resultMap="joinedAuthor"/>
     <collection property="comments" resultMap="joinedComment"/>
     <collection property="tags" resultMap="joinedTag"/>
+
     <discriminator javaType="int" column="draft">
       <case value="1" resultMap="draftPost"/>
     </discriminator>
+
+
   </resultMap>
 
   <resultMap id="draftPost" type="org.apache.ibatis.domain.blog.DraftPost" extends="joinedPost"/>

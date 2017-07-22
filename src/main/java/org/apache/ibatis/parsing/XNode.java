@@ -15,16 +15,13 @@
  */
 package org.apache.ibatis.parsing;
 
+import org.w3c.dom.CharacterData;
+import org.w3c.dom.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import org.w3c.dom.CharacterData;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 /**
  * 可以理解为XNode是原始Node的一种增强。
@@ -132,6 +129,7 @@ public class XNode {
   }
 
   public XNode evalNode(String expression) {
+      //一个简单封装
     return xpathParser.evalNode(node, expression);
   }
 
@@ -327,12 +325,15 @@ public class XNode {
   }
 
   /**
-   * 注意，这里并没有进行变量替换。尤其是没有对VALUE
+   * 获取子节点的属性值
    * @return 解析后的结果
    */
   public Properties getChildrenAsProperties() {
     Properties properties = new Properties();
     for (XNode child : getChildren()) {
+
+        //作为一个XNode节点来说, 根据前面的分析, 其属性值是经过解析之后的.
+        //所以这里的name和value, 如果其值里带有${},那么一定是取经过变量替换之后的值.
       String name = child.getStringAttribute("name");
       String value = child.getStringAttribute("value");
       if (name != null && value != null) {

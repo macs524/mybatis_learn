@@ -15,6 +15,10 @@
  */
 package org.apache.ibatis.type;
 
+import org.apache.ibatis.io.ResolverUtil;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.reflection.Jdk;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.lang.reflect.Constructor;
@@ -22,19 +26,9 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.ibatis.io.ResolverUtil;
-import org.apache.ibatis.io.Resources;
-import org.apache.ibatis.reflection.Jdk;
 
 /**
  * @author Clinton Begin
@@ -265,6 +259,11 @@ public final class TypeHandlerRegistry {
     }
   }
 
+    /**
+     * 如果javaType只注册了一个类型转换器,则直接使用他,否则也是返回NULL
+     * @param jdbcHandlerMap
+     * @return
+     */
   private TypeHandler<?> pickSoleHandler(Map<JdbcType, TypeHandler<?>> jdbcHandlerMap) {
     TypeHandler<?> soleHandler = null;
     for (TypeHandler<?> handler : jdbcHandlerMap.values()) {
@@ -324,6 +323,7 @@ public final class TypeHandlerRegistry {
   }
 
   private <T> void register(Type javaType, TypeHandler<? extends T> typeHandler) {
+      //查看其上面是否有MappedJdbcTypes注解,如果有,则从中解析JDBC类型
     MappedJdbcTypes mappedJdbcTypes = typeHandler.getClass().getAnnotation(MappedJdbcTypes.class);
     if (mappedJdbcTypes != null) {
       for (JdbcType handledJdbcType : mappedJdbcTypes.value()) {
@@ -347,8 +347,18 @@ public final class TypeHandlerRegistry {
     register((Type) type, jdbcType, handler);
   }
 
+    /**
+     * 终极注册方式
+     * @param javaType
+     * @param jdbcType
+     * @param handler
+     */
   private void register(Type javaType, JdbcType jdbcType, TypeHandler<?> handler) {
     if (javaType != null) {
+
+        //注意这里是一个Map的map. 最外层的KEY是javaType.
+        //其对应着一个jdbcType和handler的映射关系
+        //这是在javaType不为空的情况下.
       Map<JdbcType, TypeHandler<?>> map = TYPE_HANDLER_MAP.get(javaType);
       if (map == null) {
         map = new HashMap<JdbcType, TypeHandler<?>>();
@@ -367,6 +377,8 @@ public final class TypeHandlerRegistry {
 
   public void register(Class<?> typeHandlerClass) {
     boolean mappedTypeFound = false;
+
+      //首先查找这个类上是否有MappedTypes注解,这个注解定义了哪些类可以被拦截,这是一个列表
     MappedTypes mappedTypes = typeHandlerClass.getAnnotation(MappedTypes.class);
     if (mappedTypes != null) {
       for (Class<?> javaTypeClass : mappedTypes.value()) {
@@ -374,6 +386,8 @@ public final class TypeHandlerRegistry {
         mappedTypeFound = true;
       }
     }
+
+      //如果一个都没有找到,则javaType为NULL
     if (!mappedTypeFound) {
       register(getInstance(null, typeHandlerClass));
     }
@@ -397,20 +411,29 @@ public final class TypeHandlerRegistry {
 
   // Construct a handler (used also from Builders)
 
+    /**
+     * 根据Class构造一个实例,根据javaType是否为NULL,来决定使用哪个调用参数
+     * @param javaTypeClass
+     * @param typeHandlerClass
+     * @param <T>
+     * @return
+     */
   @SuppressWarnings("unchecked")
   public <T> TypeHandler<T> getInstance(Class<?> javaTypeClass, Class<?> typeHandlerClass) {
     if (javaTypeClass != null) {
       try {
         Constructor<?> c = typeHandlerClass.getConstructor(Class.class);
-        return (TypeHandler<T>) c.newInstance(javaTypeClass);
+        return (TypeHandler<T>) c.newInstance(javaTypeClass); //一个是带参数构造
       } catch (NoSuchMethodException ignored) {
         // ignored
       } catch (Exception e) {
         throw new TypeException("Failed invoking constructor for handler " + typeHandlerClass, e);
       }
     }
+
+      //如果带参的没有,则再创建一个不带参数的
     try {
-      Constructor<?> c = typeHandlerClass.getConstructor();
+      Constructor<?> c = typeHandlerClass.getConstructor(); //一个不带参数构造
       return (TypeHandler<T>) c.newInstance();
     } catch (Exception e) {
       throw new TypeException("Unable to find a usable constructor for " + typeHandlerClass, e);
@@ -426,6 +449,7 @@ public final class TypeHandlerRegistry {
     for (Class<?> type : handlerSet) {
       //Ignore inner classes and interfaces (including package-info.java) and abstract classes
       if (!type.isAnonymousClass() && !type.isInterface() && !Modifier.isAbstract(type.getModifiers())) {
+          //对于所有满足条件的类,进行注册
         register(type);
       }
     }

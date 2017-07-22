@@ -15,15 +15,15 @@
  */
 package org.apache.ibatis.mapping;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author Clinton Begin
@@ -58,6 +58,13 @@ public class ResultMapping {
       resultMapping.typeHandler = typeHandler;
     }
 
+      /**
+       * 这4个基本项是不可缺少的
+       * @param configuration 配置对象
+       * @param property POJO 属性
+       * @param column 列名
+       * @param javaType JAVA类型
+       */
     public Builder(Configuration configuration, String property, String column, Class<?> javaType) {
       this(configuration, property);
       resultMapping.column = column;
@@ -69,7 +76,7 @@ public class ResultMapping {
       resultMapping.property = property;
       resultMapping.flags = new ArrayList<ResultFlag>();
       resultMapping.composites = new ArrayList<ResultMapping>();
-      resultMapping.lazy = configuration.isLazyLoadingEnabled();
+      resultMapping.lazy = configuration.isLazyLoadingEnabled(); //取系统配置的.
     }
 
     public Builder javaType(Class<?> javaType) {
@@ -136,11 +143,14 @@ public class ResultMapping {
       // lock down collections
       resultMapping.flags = Collections.unmodifiableList(resultMapping.flags);
       resultMapping.composites = Collections.unmodifiableList(resultMapping.composites);
-      resolveTypeHandler();
+      resolveTypeHandler(); //尽可能找到一个TypeHandler, 找不到也没有办法
       validate();
       return resultMapping;
     }
 
+      /**
+       * 有效性检查, select 和 result 属性不能同时赋值, typeHandler也需要存在.
+       */
     private void validate() {
       // Issue #697: cannot define both nestedQueryId and nestedResultMapId
       if (resultMapping.nestedQueryId != null && resultMapping.nestedResultMapId != null) {
@@ -168,7 +178,8 @@ public class ResultMapping {
         }
       }
     }
-    
+
+      //检查类型转换器是否为NULL
     private void resolveTypeHandler() {
       if (resultMapping.typeHandler == null && resultMapping.javaType != null) {
         Configuration configuration = resultMapping.configuration;

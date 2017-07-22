@@ -1,15 +1,15 @@
 package org.apache.ibatis.session;
 
+import org.apache.ibatis.builder.xml.XMLConfigBuilder;
+import org.apache.ibatis.exceptions.ExceptionFactory;
+import org.apache.ibatis.executor.ErrorContext;
+import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.util.Properties;
-
-import org.apache.ibatis.builder.xml.XMLConfigBuilder;
-import org.apache.ibatis.exceptions.ExceptionFactory;
-import org.apache.ibatis.executor.ErrorContext;
-import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
 
 /**
  * SqlSessionFactoryBuilder 这个作用是为了构造SqlSessionFactory.
@@ -53,7 +53,7 @@ public class SqlSessionFactoryBuilder {
 
   public SqlSessionFactory build(XMLConfigBuilder configBuilder, Closeable closeable) {
     try {
-      return build(configBuilder.parse());
+      return build(configBuilder.parse()); //解析出Configuration参数.
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error building SqlSession.", e);
     } finally {

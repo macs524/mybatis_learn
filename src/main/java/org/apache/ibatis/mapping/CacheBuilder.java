@@ -15,24 +15,19 @@
  */
 package org.apache.ibatis.mapping;
 
+import org.apache.ibatis.builder.InitializingObject;
+import org.apache.ibatis.cache.Cache;
+import org.apache.ibatis.cache.CacheException;
+import org.apache.ibatis.cache.decorators.*;
+import org.apache.ibatis.cache.impl.PerpetualCache;
+import org.apache.ibatis.reflection.MetaObject;
+import org.apache.ibatis.reflection.SystemMetaObject;
+
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import org.apache.ibatis.cache.Cache;
-import org.apache.ibatis.cache.CacheException;
-import org.apache.ibatis.builder.InitializingObject;
-import org.apache.ibatis.cache.decorators.BlockingCache;
-import org.apache.ibatis.cache.decorators.LoggingCache;
-import org.apache.ibatis.cache.decorators.LruCache;
-import org.apache.ibatis.cache.decorators.ScheduledCache;
-import org.apache.ibatis.cache.decorators.SerializedCache;
-import org.apache.ibatis.cache.decorators.SynchronizedCache;
-import org.apache.ibatis.cache.impl.PerpetualCache;
-import org.apache.ibatis.reflection.MetaObject;
-import org.apache.ibatis.reflection.SystemMetaObject;
 
 /**
  * @author Clinton Begin
@@ -48,7 +43,7 @@ public class CacheBuilder {
   private boolean blocking;
 
   public CacheBuilder(String id) {
-    this.id = id;
+    this.id = id; //id 即为 namespace.
     this.decorators = new ArrayList<Class<? extends Cache>>();
   }
 
@@ -59,6 +54,7 @@ public class CacheBuilder {
 
   public CacheBuilder addDecorator(Class<? extends Cache> decorator) {
     if (decorator != null) {
+        //添加一个装饰器
       this.decorators.add(decorator);
     }
     return this;
@@ -89,23 +85,33 @@ public class CacheBuilder {
     return this;
   }
 
+    /**
+     * 可以看到,对于系统装饰器来说,或者没有指定type的缓存来说
+     * 系统会进行一系列的装饰,而自定义的则不会有,所以我们要根据具体情况来做决定.
+     * @return 构造好的缓存
+     */
   public Cache build() {
     setDefaultImplementations();
     Cache cache = newBaseCacheInstance(implementation, id);
     setCacheProperties(cache);
     // issue #352, do not apply decorators to custom caches
     if (PerpetualCache.class.equals(cache.getClass())) {
+        //只装饰系统的缓存,
       for (Class<? extends Cache> decorator : decorators) {
         cache = newCacheDecoratorInstance(decorator, cache);
         setCacheProperties(cache);
       }
       cache = setStandardDecorators(cache);
     } else if (!LoggingCache.class.isAssignableFrom(cache.getClass())) {
+        //如果是自定义缓存,只增加一个日志缓存
       cache = new LoggingCache(cache);
     }
     return cache;
   }
 
+    /**
+     * 再一次确保implementation和decorators是必须赋值的,没有取默认值.
+     */
   private void setDefaultImplementations() {
     if (implementation == null) {
       implementation = PerpetualCache.class;
@@ -115,17 +121,25 @@ public class CacheBuilder {
     }
   }
 
+    /**
+     * 对缓存进行标准装饰.
+     * @param cache
+     * @return
+     */
   private Cache setStandardDecorators(Cache cache) {
     try {
       MetaObject metaCache = SystemMetaObject.forObject(cache);
       if (size != null && metaCache.hasSetter("size")) {
+          //看来size可以 为空
         metaCache.setValue("size", size);
       }
       if (clearInterval != null) {
+          //间隔时间 也可以为空
         cache = new ScheduledCache(cache);
         ((ScheduledCache) cache).setClearInterval(clearInterval);
       }
       if (readWrite) {
+          //可序列化的cache.
         cache = new SerializedCache(cache);
       }
       cache = new LoggingCache(cache);
@@ -139,6 +153,7 @@ public class CacheBuilder {
     }
   }
 
+    //设置属性,如果该cache有该属性时,再进行设置,没有则报错.
   private void setCacheProperties(Cache cache) {
     if (properties != null) {
       MetaObject metaCache = SystemMetaObject.forObject(cache);
@@ -189,12 +204,13 @@ public class CacheBuilder {
   private Cache newBaseCacheInstance(Class<? extends Cache> cacheClass, String id) {
     Constructor<? extends Cache> cacheConstructor = getBaseCacheConstructor(cacheClass);
     try {
-      return cacheConstructor.newInstance(id);
+      return cacheConstructor.newInstance(id); //并以namespace作为参数.
     } catch (Exception e) {
       throw new CacheException("Could not instantiate cache implementation (" + cacheClass + "). Cause: " + e, e);
     }
   }
 
+    //取其带参数的构造器
   private Constructor<? extends Cache> getBaseCacheConstructor(Class<? extends Cache> cacheClass) {
     try {
       return cacheClass.getConstructor(String.class);
@@ -207,6 +223,7 @@ public class CacheBuilder {
   private Cache newCacheDecoratorInstance(Class<? extends Cache> cacheClass, Cache base) {
     Constructor<? extends Cache> cacheConstructor = getCacheDecoratorConstructor(cacheClass);
     try {
+        //返回参数类型为Cache的构造函数
       return cacheConstructor.newInstance(base);
     } catch (Exception e) {
       throw new CacheException("Could not instantiate cache decorator (" + cacheClass + "). Cause: " + e, e);

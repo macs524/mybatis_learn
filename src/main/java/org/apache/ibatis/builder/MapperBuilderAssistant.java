@@ -15,39 +15,19 @@
  */
 package org.apache.ibatis.builder;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.StringTokenizer;
-
 import org.apache.ibatis.cache.Cache;
 import org.apache.ibatis.cache.decorators.LruCache;
 import org.apache.ibatis.cache.impl.PerpetualCache;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
-import org.apache.ibatis.mapping.CacheBuilder;
-import org.apache.ibatis.mapping.Discriminator;
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.ParameterMap;
-import org.apache.ibatis.mapping.ParameterMapping;
-import org.apache.ibatis.mapping.ParameterMode;
-import org.apache.ibatis.mapping.ResultFlag;
-import org.apache.ibatis.mapping.ResultMap;
-import org.apache.ibatis.mapping.ResultMapping;
-import org.apache.ibatis.mapping.ResultSetType;
-import org.apache.ibatis.mapping.SqlCommandType;
-import org.apache.ibatis.mapping.SqlSource;
-import org.apache.ibatis.mapping.StatementType;
+import org.apache.ibatis.mapping.*;
 import org.apache.ibatis.reflection.MetaClass;
 import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
+
+import java.util.*;
 
 /**
  * @author Clinton Begin
@@ -59,6 +39,11 @@ public class MapperBuilderAssistant extends BaseBuilder {
   private Cache currentCache;
   private boolean unresolvedCacheRef; // issue #676
 
+    /**
+     * 辅助类,把一些功能实现放到这里.
+     * @param configuration
+     * @param resource
+     */
   public MapperBuilderAssistant(Configuration configuration, String resource) {
     super(configuration);
     ErrorContext.instance().resource(resource);
@@ -103,18 +88,27 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return currentNamespace + "." + base;
   }
 
+    /**
+     * 使用引用命名空间里的cache
+     * @param namespace
+     * @return
+     */
   public Cache useCacheRef(String namespace) {
     if (namespace == null) {
       throw new BuilderException("cache-ref element requires a namespace attribute.");
     }
     try {
       unresolvedCacheRef = true;
-      Cache cache = configuration.getCache(namespace);
+
+        //每个cache在configuration中都有存储,所以直接使用指定的命名空间查询即可
+      Cache cache = configuration.getCache(namespace); //这里并没有相互引用.
       if (cache == null) {
+          //如果这个缓存不存在,那么这也是有可能的,因为这涉及到文件解析的先后顺序.
+          // 很可能被引用的命名空间对应的文件还没有被解析.
         throw new IncompleteElementException("No cache for namespace '" + namespace + "' could be found.");
       }
-      currentCache = cache;
-      unresolvedCacheRef = false;
+      currentCache = cache; //设置当前缓存
+      unresolvedCacheRef = false; //解析完成
       return cache;
     } catch (IllegalArgumentException e) {
       throw new IncompleteElementException("No cache for namespace '" + namespace + "' could be found.", e);
@@ -128,6 +122,8 @@ public class MapperBuilderAssistant extends BaseBuilder {
       boolean readWrite,
       boolean blocking,
       Properties props) {
+
+      //以构造器的模式创建一个缓存对象.
     Cache cache = new CacheBuilder(currentNamespace)
         .implementation(valueOrDefault(typeClass, PerpetualCache.class))
         .addDecorator(valueOrDefault(evictionClass, LruCache.class))
@@ -137,8 +133,10 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .blocking(blocking)
         .properties(props)
         .build();
+
+      //在全局配置中加上这个缓存
     configuration.addCache(cache);
-    currentCache = cache;
+    currentCache = cache; //使用当前缓存, 所以这个解析一定要在cache-ref之后 ,可以替换.
     return cache;
   }
 
@@ -149,6 +147,18 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return parameterMap;
   }
 
+    /**
+     * 构造一个参数映射
+     * @param parameterType 参数类型
+     * @param property 属性
+     * @param javaType JAVA类型
+     * @param jdbcType JDBC类型
+     * @param resultMap 结果集
+     * @param parameterMode 参数模式
+     * @param typeHandler 参数类型转换器
+     * @param numericScale 精度?
+     * @return 生成好的参数映射
+     */
   public ParameterMapping buildParameterMapping(
       Class<?> parameterType,
       String property,
@@ -158,9 +168,10 @@ public class MapperBuilderAssistant extends BaseBuilder {
       ParameterMode parameterMode,
       Class<? extends TypeHandler<?>> typeHandler,
       Integer numericScale) {
+
+      //加上当前的别名引用
     resultMap = applyCurrentNamespace(resultMap, true);
 
-    // Class parameterType = parameterMapBuilder.type();
     Class<?> javaTypeClass = resolveParameterJavaType(parameterType, property, javaType, jdbcType);
     TypeHandler<?> typeHandlerInstance = resolveTypeHandler(javaTypeClass, typeHandler);
 
@@ -173,6 +184,16 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .build();
   }
 
+    /**
+     * 添加resultMap, 最终的处理
+     * @param id 表示这个resultMap的惟一索引
+     * @param type 类型
+     * @param extend 继承自
+     * @param discriminator 鉴别器
+     * @param resultMappings map中的各子节点组成的resultMapping
+     * @param autoMapping 是否自动映射
+     * @return 最终的map
+     */
   public ResultMap addResultMap(
       String id,
       Class<?> type,
@@ -208,9 +229,12 @@ public class MapperBuilderAssistant extends BaseBuilder {
       }
       resultMappings.addAll(extendedResultMappings);
     }
+
     ResultMap resultMap = new ResultMap.Builder(configuration, id, type, resultMappings, autoMapping)
         .discriminator(discriminator)
         .build();
+
+
     configuration.addResultMap(resultMap);
     return resultMap;
   }
@@ -222,6 +246,8 @@ public class MapperBuilderAssistant extends BaseBuilder {
       JdbcType jdbcType,
       Class<? extends TypeHandler<?>> typeHandler,
       Map<String, String> discriminatorMap) {
+
+      //1. 根据参数构造一个resultMapping
     ResultMapping resultMapping = buildResultMapping(
         resultType,
         null,
@@ -237,12 +263,17 @@ public class MapperBuilderAssistant extends BaseBuilder {
         null,
         null,
         false);
+
+      //将原来的resultMap的ID加上namespace.
     Map<String, String> namespaceDiscriminatorMap = new HashMap<String, String>();
     for (Map.Entry<String, String> e : discriminatorMap.entrySet()) {
       String resultMap = e.getValue();
       resultMap = applyCurrentNamespace(resultMap, true);
       namespaceDiscriminatorMap.put(e.getKey(), resultMap);
+
     }
+
+      //生成一个鉴别器
     return new Discriminator.Builder(configuration, resultMapping, namespaceDiscriminatorMap).build();
   }
 
@@ -358,6 +389,25 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return resultMaps;
   }
 
+    /**
+     * 构造一个ResultMapping
+     *
+     * @param resultType resultMap的类型
+     * @param property 该节点对应的Java POJO的属性名
+     * @param column 列名, 和property应该是一一对应的
+     * @param javaType java类型
+     * @param jdbcType jdbc类型
+     * @param nestedSelect select子句
+     * @param nestedResultMap 内嵌的resultMap
+     * @param notNullColumn 非NULL列
+     * @param columnPrefix 列前缀
+     * @param typeHandler 类型转换器
+     * @param flags 节点标签
+     * @param resultSet resultSet 结果集
+     * @param foreignColumn 外键,
+     * @param lazy 是否延迟
+     * @return 对应的一个对象
+     */
   public ResultMapping buildResultMapping(
       Class<?> resultType,
       String property,
@@ -373,12 +423,20 @@ public class MapperBuilderAssistant extends BaseBuilder {
       String resultSet,
       String foreignColumn,
       boolean lazy) {
+
+      //经过处理, javaType至少是Object.class
     Class<?> javaTypeClass = resolveResultJavaType(resultType, property, javaType);
+
+    //如果定义了则取定义的值,如果没有定义,则需要创建一个.
+      // 但如果typeHandler为NULL的话,则typeHandlerInstance也肯定是为NULL的,直接后面就不处理了.
     TypeHandler<?> typeHandlerInstance = resolveTypeHandler(javaTypeClass, typeHandler);
+
     List<ResultMapping> composites = parseCompositeColumnName(column);
+
+      //最终,我们生成了一个ResultMapping.
     return new ResultMapping.Builder(configuration, property, column, javaTypeClass)
         .jdbcType(jdbcType)
-        .nestedQueryId(applyCurrentNamespace(nestedSelect, true))
+        .nestedQueryId(applyCurrentNamespace(nestedSelect, true)) //加上了命名空间
         .nestedResultMapId(applyCurrentNamespace(nestedResultMap, true))
         .resultSet(resultSet)
         .typeHandler(typeHandlerInstance)
@@ -407,6 +465,11 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return columns;
   }
 
+    /**
+     * 处理多列的情况,这个我们暂时不分析.
+     * @param columnName
+     * @return
+     */
   private List<ResultMapping> parseCompositeColumnName(String columnName) {
     List<ResultMapping> composites = new ArrayList<ResultMapping>();
     if (columnName != null && (columnName.indexOf('=') > -1 || columnName.indexOf(',') > -1)) {
@@ -422,8 +485,17 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return composites;
   }
 
+    /**
+     * 进一步解析这个节点对应的JAVA类型
+     * @param resultType JAVA POJO 类
+     * @param property  JAVA POJO 属性
+     * @param javaType 配置的JAVA类型
+     * @return 最终的JAVA类型
+     */
   private Class<?> resolveResultJavaType(Class<?> resultType, String property, Class<?> javaType) {
-    if (javaType == null && property != null) {
+
+      //如果没有配置,则通过反射的方式去解析出javaType.
+      if (javaType == null && property != null) {
       try {
         MetaClass metaResultType = MetaClass.forClass(resultType, configuration.getReflectorFactory());
         javaType = metaResultType.getSetterType(property);
@@ -432,18 +504,33 @@ public class MapperBuilderAssistant extends BaseBuilder {
       }
     }
     if (javaType == null) {
+        //如果没找到,就为Object吧
       javaType = Object.class;
     }
+
     return javaType;
   }
 
+    /**
+     * 根据诸多的入参来解析JavaType,
+     * 其实如果javaType不为NULL,则根本不需要解析
+     *
+     * @param resultType 参数类型
+     * @param property 属性
+     * @param javaType javaType
+     * @param jdbcType jdbcType
+     * @return
+     */
   private Class<?> resolveParameterJavaType(Class<?> resultType, String property, Class<?> javaType, JdbcType jdbcType) {
     if (javaType == null) {
       if (JdbcType.CURSOR.equals(jdbcType)) {
+          //如果JDBC是游标,则java是ResultSet
         javaType = java.sql.ResultSet.class;
       } else if (Map.class.isAssignableFrom(resultType)) {
+          //如果参数类型是Map, 则javaType应为Object
         javaType = Object.class;
       } else {
+          //通过反射的方式来根据字段取得其类型,所以能直接设置值就直接点,这样能提高效率.
         MetaClass metaResultType = MetaClass.forClass(resultType, configuration.getReflectorFactory());
         javaType = metaResultType.getGetterType(property);
       }

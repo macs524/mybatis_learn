@@ -15,12 +15,12 @@
  */
 package org.apache.ibatis.mapping;
 
-import java.sql.ResultSet;
-
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
+
+import java.sql.ResultSet;
 
 /**
  * @author Clinton Begin
@@ -56,7 +56,7 @@ public class ParameterMapping {
       parameterMapping.configuration = configuration;
       parameterMapping.property = property;
       parameterMapping.javaType = javaType;
-      parameterMapping.mode = ParameterMode.IN;
+      parameterMapping.mode = ParameterMode.IN; //默认参数为IN
     }
 
     public Builder mode(ParameterMode mode) {
@@ -105,6 +105,9 @@ public class ParameterMapping {
       return parameterMapping;
     }
 
+      /**
+       * 有效性检查, 如果是resultSet, 则需要有MapId, 否则typeHandler不能为NULL
+       */
     private void validate() {
       if (ResultSet.class.equals(parameterMapping.javaType)) {
         if (parameterMapping.resultMapId == null) { 
@@ -121,6 +124,9 @@ public class ParameterMapping {
       }
     }
 
+      /**
+       * 解析类型处理器,当然仍然有可能是nULL
+       */
     private void resolveTypeHandler() {
       if (parameterMapping.typeHandler == null && parameterMapping.javaType != null) {
         Configuration configuration = parameterMapping.configuration;
