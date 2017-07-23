@@ -103,6 +103,7 @@
           <trim prefix="AND">
             <include refid="byBlogId">
                 <property name="prefix" value="blog"/>
+
             </include>
           </trim>
         </otherwise>

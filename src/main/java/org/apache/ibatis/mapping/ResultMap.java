@@ -15,16 +15,6 @@
  */
 package org.apache.ibatis.mapping;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.logging.Log;
@@ -32,6 +22,10 @@ import org.apache.ibatis.logging.LogFactory;
 import org.apache.ibatis.reflection.Jdk;
 import org.apache.ibatis.reflection.ParamNameUtil;
 import org.apache.ibatis.session.Configuration;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.util.*;
 
 /**
  * @author Clinton Begin
@@ -81,6 +75,10 @@ public class ResultMap {
       return resultMap.type;
     }
 
+      /**
+       * resultMap的终极构造
+       * @return resultMap
+       */
     public ResultMap build() {
       if (resultMap.id == null) {
         throw new IllegalArgumentException("ResultMaps must have an id");
@@ -90,13 +88,16 @@ public class ResultMap {
       resultMap.idResultMappings = new ArrayList<ResultMapping>();
       resultMap.constructorResultMappings = new ArrayList<ResultMapping>();
       resultMap.propertyResultMappings = new ArrayList<ResultMapping>();
+
       final List<String> constructorArgNames = new ArrayList<String>();
+
+        //1. 处理每一个子mapping.
       for (ResultMapping resultMapping : resultMap.resultMappings) {
         resultMap.hasNestedQueries = resultMap.hasNestedQueries || resultMapping.getNestedQueryId() != null;
         resultMap.hasNestedResultMaps = resultMap.hasNestedResultMaps || (resultMapping.getNestedResultMapId() != null && resultMapping.getResultSet() == null);
         final String column = resultMapping.getColumn();
         if (column != null) {
-          resultMap.mappedColumns.add(column.toUpperCase(Locale.ENGLISH));
+          resultMap.mappedColumns.add(column.toUpperCase(Locale.ENGLISH)); //映射的列
         } else if (resultMapping.isCompositeResult()) {
           for (ResultMapping compositeResultMapping : resultMapping.getComposites()) {
             final String compositeColumn = compositeResultMapping.getColumn();
@@ -105,25 +106,33 @@ public class ResultMap {
             }
           }
         }
+
+          //映射的属性
         final String property = resultMapping.getProperty();
         if(property != null) {
           resultMap.mappedProperties.add(property);
         }
         if (resultMapping.getFlags().contains(ResultFlag.CONSTRUCTOR)) {
-          resultMap.constructorResultMappings.add(resultMapping);
+          resultMap.constructorResultMappings.add(resultMapping); //构造函数的mapping
           if (resultMapping.getProperty() != null) {
             constructorArgNames.add(resultMapping.getProperty());
           }
         } else {
-          resultMap.propertyResultMappings.add(resultMapping);
+          resultMap.propertyResultMappings.add(resultMapping); //普通属性集的mapping
         }
         if (resultMapping.getFlags().contains(ResultFlag.ID)) {
-          resultMap.idResultMappings.add(resultMapping);
+          resultMap.idResultMappings.add(resultMapping); //id mapping.
         }
       }
+
+
       if (resultMap.idResultMappings.isEmpty()) {
+          //如果idmapping没有,则取所有.
         resultMap.idResultMappings.addAll(resultMap.resultMappings);
       }
+
+
+
       if (!constructorArgNames.isEmpty()) {
         final List<String> actualArgNames = argNamesOfMatchingConstructor(constructorArgNames);
         if (actualArgNames == null) {
@@ -132,6 +141,7 @@ public class ResultMap {
               + resultMap.getType().getName() + "' by arg names " + constructorArgNames
               + ". There might be more info in debug log.");
         }
+          // 并根据其在类中定义的参数顺序,对mapping进行排序.
         Collections.sort(resultMap.constructorResultMappings, new Comparator<ResultMapping>() {
           @Override
           public int compare(ResultMapping o1, ResultMapping o2) {
@@ -141,7 +151,7 @@ public class ResultMap {
           }
         });
       }
-      // lock down collections
+      // lock down collections, 使之不可修改
       resultMap.resultMappings = Collections.unmodifiableList(resultMap.resultMappings);
       resultMap.idResultMappings = Collections.unmodifiableList(resultMap.idResultMappings);
       resultMap.constructorResultMappings = Collections.unmodifiableList(resultMap.constructorResultMappings);
@@ -150,6 +160,7 @@ public class ResultMap {
       return resultMap;
     }
 
+      //根据构造函数的属性去查找原对象的反射内容,找到一个合适的构造函数,将其参数列表返回回来
     private List<String> argNamesOfMatchingConstructor(List<String> constructorArgNames) {
       Constructor<?>[] constructors = resultMap.type.getDeclaredConstructors();
       for (Constructor<?> constructor : constructors) {

@@ -15,16 +15,15 @@
  */
 package org.apache.ibatis.scripting.xmltags;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import ognl.OgnlContext;
 import ognl.OgnlException;
 import ognl.OgnlRuntime;
 import ognl.PropertyAccessor;
-
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.session.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Clinton Begin
@@ -61,6 +60,7 @@ public class DynamicContext {
     bindings.put(name, value);
   }
 
+    //把SQL片断加在一起就行了.
   public void appendSql(String sql) {
     sqlBuilder.append(sql);
     sqlBuilder.append(" ");

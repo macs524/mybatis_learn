@@ -29,9 +29,18 @@ public class IfSqlNode implements SqlNode {
     this.evaluator = new ExpressionEvaluator();
   }
 
+    /**
+     * 重点在于这部分
+     * @param context
+     * @return
+     */
   @Override
   public boolean apply(DynamicContext context) {
+      //test是一个表达式,比如 includeLastName != null
+      //所以evaluator的作用很显然,就是根据参数,分析 includeLastName != null 是否成立
     if (evaluator.evaluateBoolean(test, context.getBindings())) {
+
+        //如果满足条件 , 则执行其子节点的apply语句.
       contents.apply(context);
       return true;
     }

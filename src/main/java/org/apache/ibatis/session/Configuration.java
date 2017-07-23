@@ -611,6 +611,8 @@ public class Configuration {
 
   public void addResultMap(ResultMap rm) {
     resultMaps.put(rm.getId(), rm);
+
+      //终于完了,最终,会是一个resultMap, 和key是有映射关系.的.
     checkLocallyForDiscriminatedNestedResultMaps(rm);
     checkGloballyForDiscriminatedNestedResultMaps(rm);
   }
@@ -801,9 +803,10 @@ public class Configuration {
   // Slow but a one time cost. A better solution is welcome.
   protected void checkGloballyForDiscriminatedNestedResultMaps(ResultMap rm) {
     if (rm.hasNestedResultMaps()) {
+        //如果它有嵌套的, 则遍历目前已有的列表,查看哪个鉴别器包含它,如果包含,则更改变量,说明其有嵌套map.
       for (Map.Entry<String, ResultMap> entry : resultMaps.entrySet()) {
         Object value = entry.getValue();
-        if (value instanceof ResultMap) {
+        if (value != null) {
           ResultMap entryResultMap = (ResultMap) value;
           if (!entryResultMap.hasNestedResultMaps() && entryResultMap.getDiscriminator() != null) {
             Collection<String> discriminatedResultMapNames = entryResultMap.getDiscriminator().getDiscriminatorMap().values();
@@ -817,10 +820,15 @@ public class Configuration {
   }
 
   // Slow but a one time cost. A better solution is welcome.
+
+    /**
+     * 如果其鉴别器有嵌入式Map, 则其应有嵌入式的MAP
+     * @param rm
+     */
   protected void checkLocallyForDiscriminatedNestedResultMaps(ResultMap rm) {
     if (!rm.hasNestedResultMaps() && rm.getDiscriminator() != null) {
       for (Map.Entry<String, String> entry : rm.getDiscriminator().getDiscriminatorMap().entrySet()) {
-        String discriminatedResultMapName = entry.getValue();
+        String discriminatedResultMapName = entry.getValue(); //resultMap
         if (hasResultMap(discriminatedResultMapName)) {
           ResultMap discriminatedResultMap = resultMaps.get(discriminatedResultMapName);
           if (discriminatedResultMap.hasNestedResultMaps()) {

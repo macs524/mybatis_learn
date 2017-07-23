@@ -77,6 +77,7 @@ public class ParameterExpression extends HashMap<String, String> {
         return i;
       }
     }
+      //表示全空白.
     return expression.length();
   }
 

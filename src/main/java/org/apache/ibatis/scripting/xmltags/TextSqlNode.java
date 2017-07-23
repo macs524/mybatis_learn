@@ -15,12 +15,12 @@
  */
 package org.apache.ibatis.scripting.xmltags;
 
-import java.util.regex.Pattern;
-
 import org.apache.ibatis.parsing.GenericTokenParser;
 import org.apache.ibatis.parsing.TokenHandler;
 import org.apache.ibatis.scripting.ScriptingException;
 import org.apache.ibatis.type.SimpleTypeRegistry;
+
+import java.util.regex.Pattern;
 
 /**
  * @author Clinton Begin
@@ -37,14 +37,24 @@ public class TextSqlNode implements SqlNode {
     this.text = text;
     this.injectionFilter = injectionFilter;
   }
-  
+
+    /**
+     * 判断文本是不是动态的, 经过分析实际上就是看text中是否有${}之类的token.
+     * @return
+     */
   public boolean isDynamic() {
     DynamicCheckerTokenParser checker = new DynamicCheckerTokenParser();
     GenericTokenParser parser = createParser(checker);
-    parser.parse(text);
+    parser.parse(text);//因为解析后的值并没有使用,所以checker在处理时返回任何内容都是OK的
+      //重要的是是否设置了check的内部属性.
     return checker.isDynamic();
   }
 
+    /**
+     * 动态文本,  根据context进行解析.
+     * @param context
+     * @return
+     */
   @Override
   public boolean apply(DynamicContext context) {
     GenericTokenParser parser = createParser(new BindingTokenParser(context, injectionFilter));
@@ -74,6 +84,8 @@ public class TextSqlNode implements SqlNode {
       } else if (SimpleTypeRegistry.isSimpleType(parameter.getClass())) {
         context.getBindings().put("value", parameter);
       }
+
+        //这里content 表示变量名, 那么如果要有的话就直接替换了.
       Object value = OgnlCache.getValue(content, context.getBindings());
       String srtValue = (value == null ? "" : String.valueOf(value)); // issue #274 return "" instead of "null"
       checkInjection(srtValue);

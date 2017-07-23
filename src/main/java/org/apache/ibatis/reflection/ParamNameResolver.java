@@ -16,18 +16,18 @@
 
 package org.apache.ibatis.reflection;
 
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.binding.MapperMethod.ParamMap;
+import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.session.ResultHandler;
+import org.apache.ibatis.session.RowBounds;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.binding.MapperMethod.ParamMap;
-import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.session.ResultHandler;
-import org.apache.ibatis.session.RowBounds;
 
 public class ParamNameResolver {
 
@@ -50,34 +50,48 @@ public class ParamNameResolver {
 
   private boolean hasParamAnnotation;
 
+    /**
+     * 解析方法的参数名
+     * @param config 配置
+     * @param method 方法
+     */
   public ParamNameResolver(Configuration config, Method method) {
     final Class<?>[] paramTypes = method.getParameterTypes();
     final Annotation[][] paramAnnotations = method.getParameterAnnotations();
     final SortedMap<Integer, String> map = new TreeMap<Integer, String>();
     int paramCount = paramAnnotations.length;
     // get names from @Param annotations
+
+      //处理所有参数类型(不包括特定的RowBounds和ResultHandler
     for (int paramIndex = 0; paramIndex < paramCount; paramIndex++) {
       if (isSpecialParameter(paramTypes[paramIndex])) {
         // skip special parameters
         continue;
       }
       String name = null;
+
+        //遍历该参数上的注解
       for (Annotation annotation : paramAnnotations[paramIndex]) {
+          //如果注解是Param, 取其名称
         if (annotation instanceof Param) {
           hasParamAnnotation = true;
           name = ((Param) annotation).value();
           break;
         }
       }
+
+        //如果上面没有Param注解.
       if (name == null) {
         // @Param was not specified.
         if (config.isUseActualParamName()) {
+            //默认是true.
           name = getActualParamName(method, paramIndex);
         }
         if (name == null) {
           // use the parameter index as the name ("0", "1", ...)
           // gcode issue #71
-          name = String.valueOf(map.size());
+          name = String.valueOf(map.size()); //所以,在JDK1.7下,如果没有为参数指定@Param
+            //那就只有是param_0, param_1, 这样的了.
         }
       }
       map.put(paramIndex, name);
@@ -87,8 +101,10 @@ public class ParamNameResolver {
 
   private String getActualParamName(Method method, int paramIndex) {
     if (Jdk.parameterExists) {
+        //如果是java8, 则可以获取其实际名称.
       return ParamNameUtil.getParamNames(method).get(paramIndex);
     }
+      //否则返回NULL
     return null;
   }
 

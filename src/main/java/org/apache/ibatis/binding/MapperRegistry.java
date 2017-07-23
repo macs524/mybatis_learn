@@ -79,6 +79,7 @@ public class MapperRegistry {
         MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
         parser.parse(); //并基于注解解析
 
+          //解析完毕.
         loadCompleted = true;
       } finally {
         if (!loadCompleted) {

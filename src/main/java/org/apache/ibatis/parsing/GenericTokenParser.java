@@ -16,6 +16,7 @@
 package org.apache.ibatis.parsing;
 
 /**
+ * 通用Token处理器
  * @author Clinton Begin
  */
 public class GenericTokenParser {
@@ -24,12 +25,34 @@ public class GenericTokenParser {
   private final String closeToken;
   private final TokenHandler handler;
 
+    /**
+     * 构造
+     * @param openToken token开始标记
+     * @param closeToken token结束标记
+     * @param handler token处理器
+     */
   public GenericTokenParser(String openToken, String closeToken, TokenHandler handler) {
     this.openToken = openToken;
     this.closeToken = closeToken;
     this.handler = handler;
   }
 
+    /**
+     * 解析, 主要业务逻辑如下:
+     * 1)解析text中是否存在指定的token, 什么是指定的token
+     *   比如,如果 openToken='${', closeToken='}'
+     *   则主要是解析text中有没有${xxx} 这样的token
+     * 2) 如果有, 则将解析出来的token存储到expression变量中去,交给handler处理
+     *   不同的handler, 处理方式不一样.
+     *   比如,我们前面看到的变量替换,其handler的处理方式是将expression作为key,去变量集中查找是否有其对应的value.
+     *   没有则原封不动的返回.
+     *
+     *   但对于 DynamicCheckerTokenParser 来说,只是将内部的标记置为true, 表示这是一个动态sql
+     *   然而返回的却是null
+     *
+     * @param text
+     * @return
+     */
   public String parse(String text) {
     if (text == null || text.isEmpty()) {
       return "";

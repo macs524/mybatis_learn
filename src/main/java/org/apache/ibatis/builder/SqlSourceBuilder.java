@@ -15,10 +15,6 @@
  */
 package org.apache.ibatis.builder;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.ibatis.mapping.ParameterMapping;
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.parsing.GenericTokenParser;
@@ -27,6 +23,10 @@ import org.apache.ibatis.reflection.MetaClass;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Clinton Begin
@@ -39,10 +39,19 @@ public class SqlSourceBuilder extends BaseBuilder {
     super(configuration);
   }
 
+    /**
+     * 解析处理
+     * @param originalSql 原始SQL
+     * @param parameterType 参数类型
+     * @param additionalParameters 附加参数
+     * @return 解析结果, 最终得到一个静态的SqlSource
+     */
   public SqlSource parse(String originalSql, Class<?> parameterType, Map<String, Object> additionalParameters) {
     ParameterMappingTokenHandler handler = new ParameterMappingTokenHandler(configuration, parameterType, additionalParameters);
     GenericTokenParser parser = new GenericTokenParser("#{", "}", handler);
     String sql = parser.parse(originalSql);
+
+      //这个时候, sql 中会将 #{}直接转化为?
     return new StaticSqlSource(configuration, sql, handler.getParameterMappings());
   }
 
@@ -65,13 +74,20 @@ public class SqlSourceBuilder extends BaseBuilder {
     @Override
     public String handleToken(String content) {
       parameterMappings.add(buildParameterMapping(content));
-      return "?";
+      return "?"; //直接返回?
     }
 
+      /**
+       * 根据变量名构造出一个ParameterMapping.
+       * @param content 变量名
+       * @return 参数映射
+       */
     private ParameterMapping buildParameterMapping(String content) {
       Map<String, String> propertiesMap = parseParameterMapping(content);
       String property = propertiesMap.get("property");
-      Class<?> propertyType;
+
+        //计算属性类型
+        Class<?> propertyType;
       if (metaParameters.hasGetter(property)) { // issue #448 get type from additional params
         propertyType = metaParameters.getGetterType(property);
       } else if (typeHandlerRegistry.hasTypeHandler(parameterType)) {
@@ -88,6 +104,8 @@ public class SqlSourceBuilder extends BaseBuilder {
           propertyType = Object.class;
         }
       }
+
+        //这一块的代码着实比较复杂, 暂不分析
       ParameterMapping.Builder builder = new ParameterMapping.Builder(configuration, property, propertyType);
       Class<?> javaType = propertyType;
       String typeHandlerAlias = null;

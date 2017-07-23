@@ -72,6 +72,7 @@ public class SqlSessionFactoryBuilder {
    * @return 结果
    */
   public SqlSessionFactory build(Configuration config) {
+      //也就是说,初始化后,mysql中的所有配置信息都到了config里,那么可以顺序创建SessionFactory了.
     return new DefaultSqlSessionFactory(config);
   }
 

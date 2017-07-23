@@ -41,8 +41,8 @@ public class MapperBuilderAssistant extends BaseBuilder {
 
     /**
      * 辅助类,把一些功能实现放到这里.
-     * @param configuration
-     * @param resource
+     * @param configuration 配置变量
+     * @param resource 资源名? 这个最终会被用来放在MappedStatement中作为其属性之一.
      */
   public MapperBuilderAssistant(Configuration configuration, String resource) {
     super(configuration);
@@ -205,12 +205,14 @@ public class MapperBuilderAssistant extends BaseBuilder {
     extend = applyCurrentNamespace(extend, true);
 
     if (extend != null) {
+
+        //如果待继承的还没有解析,则先将其置为未完成
       if (!configuration.hasResultMap(extend)) {
         throw new IncompleteElementException("Could not find a parent resultmap with id '" + extend + "'");
       }
-      ResultMap resultMap = configuration.getResultMap(extend);
+      ResultMap resultMap = configuration.getResultMap(extend); // 父类
       List<ResultMapping> extendedResultMappings = new ArrayList<ResultMapping>(resultMap.getResultMappings());
-      extendedResultMappings.removeAll(resultMappings);
+      extendedResultMappings.removeAll(resultMappings); //这是扩展那一部分
       // Remove parent constructor if this resultMap declares a constructor.
       boolean declaresConstructor = false;
       for (ResultMapping resultMapping : resultMappings) {
@@ -219,7 +221,11 @@ public class MapperBuilderAssistant extends BaseBuilder {
           break;
         }
       }
+
+
       if (declaresConstructor) {
+
+          //定义了构造函数, 则移除父类的构造函数.
         Iterator<ResultMapping> extendedResultMappingsIter = extendedResultMappings.iterator();
         while (extendedResultMappingsIter.hasNext()) {
           if (extendedResultMappingsIter.next().getFlags().contains(ResultFlag.CONSTRUCTOR)) {
@@ -229,6 +235,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       }
       resultMappings.addAll(extendedResultMappings);
     }
+
 
     ResultMap resultMap = new ResultMap.Builder(configuration, id, type, resultMappings, autoMapping)
         .discriminator(discriminator)
@@ -324,13 +331,14 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .useCache(valueOrDefault(useCache, isSelect))
         .cache(currentCache);
 
+      //这一段可以忽略
     ParameterMap statementParameterMap = getStatementParameterMap(parameterMap, parameterType, id);
     if (statementParameterMap != null) {
       statementBuilder.parameterMap(statementParameterMap);
     }
 
     MappedStatement statement = statementBuilder.build();
-    configuration.addMappedStatement(statement);
+    configuration.addMappedStatement(statement); //最终是以key-value的形式添加到configure中去.
     return statement;
   }
 
@@ -361,8 +369,15 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return parameterMap;
   }
 
+    /**
+     * 构造一个resultMap的list.
+     * @param resultMap
+     * @param resultType
+     * @param statementId
+     * @return
+     */
   private List<ResultMap> getStatementResultMaps(
-      String resultMap,
+      String resultMap, //resultMap名称
       Class<?> resultType,
       String statementId) {
     resultMap = applyCurrentNamespace(resultMap, true);
@@ -378,6 +393,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         }
       }
     } else if (resultType != null) {
+        //嬠没有指定ID就是inline
       ResultMap inlineResultMap = new ResultMap.Builder(
           configuration,
           statementId + "-Inline",

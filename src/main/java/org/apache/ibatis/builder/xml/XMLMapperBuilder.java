@@ -92,13 +92,17 @@ public class XMLMapperBuilder extends BaseBuilder {
         //没有则进行解析,也就是说, 多个同名的资源文件,虽然在这里不报错,但也不会解析多次
         //终极解析开始了,先从Mapper开始
       configurationElement(parser.evalNode("/mapper"));
-      configuration.addLoadedResource(resource);
+
+      configuration.addLoadedResource(resource); //表示资源已经加载.
       bindMapperForNamespace();
+        //那么,至此,对于Mybatis的源码分析, 至少配置解析这一段的主体线路就算是比较清楚了.
+        //其来龙去脉有了个清晰的认识,但是有些地方还是需要测试.
     }
 
-    parsePendingResultMaps();
-    parsePendingCacheRefs();
-    parsePendingStatements();
+      //每加载一个mapper文件,就对原来没解析成功的再次解析
+    parsePendingResultMaps(); //resultMap
+    parsePendingCacheRefs(); //缓存引用
+    parsePendingStatements(); //阻塞的语句
   }
 
   public XNode getSqlFragment(String refid) {
@@ -131,8 +135,11 @@ public class XMLMapperBuilder extends BaseBuilder {
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
         //5. 解析resultMap, 这个比较重要
       resultMapElements(context.evalNodes("/mapper/resultMap"));
+        //6. 解析sql节点
       sqlElement(context.evalNodes("/mapper/sql"));
+        //7. 解析四大节点
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
+
     } catch (Exception e) {
       throw new BuilderException("Error parsing Mapper XML. Cause: " + e, e);
     }
@@ -145,12 +152,19 @@ public class XMLMapperBuilder extends BaseBuilder {
     buildStatementFromContext(list, null);
   }
 
+    /**
+     * 这个属性终级解析了,也应该是最复杂的了.
+     * @param list 待处理的节点,可以是select,update, insert, delete. 没有其它节点了
+     * @param requiredDatabaseId 需要的databaseId, 可以认为其就是NULL
+     */
   private void buildStatementFromContext(List<XNode> list, String requiredDatabaseId) {
     for (XNode context : list) {
+        //由于很复杂,所以又单独使用一个Builder来解析,如下.
       final XMLStatementBuilder statementParser = new XMLStatementBuilder(configuration, builderAssistant, context, requiredDatabaseId);
       try {
         statementParser.parseStatementNode();
       } catch (IncompleteElementException e) {
+          //如果解析异常,先存起来.
         configuration.addIncompleteStatement(statementParser);
       }
     }
@@ -468,6 +482,7 @@ public class XMLMapperBuilder extends BaseBuilder {
     return builderAssistant.buildDiscriminator(resultType, column, javaTypeClass, jdbcTypeEnum, typeHandlerClass, discriminatorMap);
   }
 
+
   private void sqlElement(List<XNode> list) throws Exception {
     if (configuration.getDatabaseId() != null) {
       sqlElement(list, configuration.getDatabaseId());
@@ -475,6 +490,17 @@ public class XMLMapperBuilder extends BaseBuilder {
     sqlElement(list, null);
   }
 
+    /**
+     * 解析sql节点, 有点类似于变量定义
+     *
+     * 示例:
+     * <sql id="xxx">id, role_name, note </sql>
+     *
+     * 这个方法处理得非常简单,仅仅是把满足条件的节点存储了下来.
+     * @param list sql节点列表
+     * @param requiredDatabaseId 要求的DB ID
+     * @throws Exception
+     */
   private void sqlElement(List<XNode> list, String requiredDatabaseId) throws Exception {
     for (XNode context : list) {
       String databaseId = context.getStringAttribute("databaseId");
@@ -573,6 +599,9 @@ public class XMLMapperBuilder extends BaseBuilder {
     return null;
   }
 
+    /**
+     * 注意这一个方法, 非常重要.
+     */
   private void bindMapperForNamespace() {
     String namespace = builderAssistant.getCurrentNamespace();
     if (namespace != null) {
@@ -583,11 +612,20 @@ public class XMLMapperBuilder extends BaseBuilder {
         //ignore, bound type is not required
       }
       if (boundType != null) {
+          //如果nameSpace对应了一个Mapper, 且没有被解析, 则对这个Mapper进行解析
+          // 前缀是加上"namespace:"
         if (!configuration.hasMapper(boundType)) {
           // Spring may not know the real resource name so we set a flag
           // to prevent loading again this resource from the mapper interface
           // look at MapperAnnotationBuilder#loadXmlResource
           configuration.addLoadedResource("namespace:" + namespace);
+
+            //所以,如果在XML中配置的namespace是一个类的话,
+            //那么 mybatis在解析时,肯定就会将这个类找出来,并对上面的注解加以解析.
+
+            //那么现在问题来了, 如果某个方法即在xml中定义了,又有@Select注解,应该如何破呢?
+            //经过排查, 由于在添加statement时,并没有判断configuration中是否存在,
+            //所以, 如果出现多个配置,那么 注解要优于XML
           configuration.addMapper(boundType);
         }
       }

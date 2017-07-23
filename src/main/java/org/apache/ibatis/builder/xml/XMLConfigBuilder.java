@@ -670,6 +670,8 @@ public class XMLConfigBuilder extends BaseBuilder {
             mapperParser.parse();
           } else if (resource == null && url == null && mapperClass != null) {
             Class<?> mapperInterface = Resources.classForName(mapperClass);
+
+              //下面我们来分析,如果mapper直接指的是一个Class呢?
             configuration.addMapper(mapperInterface);
           } else {
             throw new BuilderException("A mapper element may only specify a url, resource or class, but not more than one.");
