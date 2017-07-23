@@ -625,7 +625,9 @@ public class XMLMapperBuilder extends BaseBuilder {
 
             //那么现在问题来了, 如果某个方法即在xml中定义了,又有@Select注解,应该如何破呢?
             //经过排查, 由于在添加statement时,并没有判断configuration中是否存在,
-            //所以, 如果出现多个配置,那么 注解要优于XML
+            // 但是, configuration使用的是StrictMap, 不允许重复添加
+
+            // 所以,上面说这种情况是不允许存在的.
           configuration.addMapper(boundType);
         }
       }
