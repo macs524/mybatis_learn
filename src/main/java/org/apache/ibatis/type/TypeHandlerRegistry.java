@@ -76,6 +76,7 @@ public final class TypeHandlerRegistry {
 
     register(Reader.class, new ClobReaderTypeHandler());
     register(String.class, new StringTypeHandler());
+      //双重MAP在这里体现得非常完整.
     register(String.class, JdbcType.CHAR, new StringTypeHandler());
     register(String.class, JdbcType.CLOB, new ClobTypeHandler());
     register(String.class, JdbcType.VARCHAR, new StringTypeHandler());
@@ -359,12 +360,14 @@ public final class TypeHandlerRegistry {
         //注意这里是一个Map的map. 最外层的KEY是javaType.
         //其对应着一个jdbcType和handler的映射关系
         //这是在javaType不为空的情况下.
-      Map<JdbcType, TypeHandler<?>> map = TYPE_HANDLER_MAP.get(javaType);
-      if (map == null) {
-        map = new HashMap<JdbcType, TypeHandler<?>>();
-        TYPE_HANDLER_MAP.put(javaType, map);
-      }
-      map.put(jdbcType, handler);
+          Map<JdbcType, TypeHandler<?>> map = TYPE_HANDLER_MAP.get(javaType);
+          if (map == null) {
+            map = new HashMap<JdbcType, TypeHandler<?>>();//这是一个hashMap
+            TYPE_HANDLER_MAP.put(javaType, map);
+          }
+          map.put(jdbcType, handler); // 也就意味着, 如果系统之前已经定义了typeHandler, 那么这里会直接替换的
+        //也就是说,自定义的会替换原来的
+
     }
     ALL_TYPE_HANDLERS_MAP.put(handler.getClass(), handler);
   }

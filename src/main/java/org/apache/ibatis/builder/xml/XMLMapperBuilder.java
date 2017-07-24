@@ -534,6 +534,9 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     /**
      * 统一解析,那么可能的节点是ID/RESULT/ASSOCIATION/COLLECTION/IDARG/ARG
+     *
+     * 这个才是解析resultMap下各个result的
+     * 并最终生成一个resultMapping
      * @param context 节点,这个当然必须有
      * @param resultType resultMap的类型
      * @param flags 节点标记,可能有ID,还有可能有CONSTRUCTOR
@@ -574,9 +577,10 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     Class<?> javaTypeClass = resolveClass(javaType); //java类型
 
-      //处理器类型,可能为NULL
+      //处理器类型, 如果直接指定了,当然不会为NULL, 也就不用从MAP中查找了
     @SuppressWarnings("unchecked")
-    Class<? extends TypeHandler<?>> typeHandlerClass = (Class<? extends TypeHandler<?>>) resolveClass(typeHandler);
+    Class<? extends TypeHandler<?>> typeHandlerClass =
+            (Class<? extends TypeHandler<?>>) resolveClass(typeHandler);
 
       //JDBC类型,也可能为nULL
     JdbcType jdbcTypeEnum = resolveJdbcType(jdbcType);

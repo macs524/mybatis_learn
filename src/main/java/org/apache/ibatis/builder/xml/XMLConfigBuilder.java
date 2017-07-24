@@ -588,24 +588,30 @@ public class XMLConfigBuilder extends BaseBuilder {
           String typeHandlerPackage = child.getStringAttribute("name");
           typeHandlerRegistry.register(typeHandlerPackage);
         } else {
+            //第二种方式,解析指定的单个typeHandler
           String javaTypeName = child.getStringAttribute("javaType");
           String jdbcTypeName = child.getStringAttribute("jdbcType");
-          String handlerTypeName = child.getStringAttribute("handler");
 
-          Class<?> javaTypeClass = resolveClass(javaTypeName);
-          JdbcType jdbcType = resolveJdbcType(jdbcTypeName);
-          Class<?> typeHandlerClass = resolveClass(handlerTypeName);
-          if (javaTypeClass != null) {
-            if (jdbcType == null) {
-              typeHandlerRegistry.register(javaTypeClass, typeHandlerClass);
+
+          Class<?> javaTypeClass = resolveClass(javaTypeName);// 如果没有直接设置javaType, 则这个可能是NULL
+          JdbcType jdbcType = resolveJdbcType(jdbcTypeName); // 如果没有直接设置jdbcType, 则这个也有可能是NULL
+
+            //类型定义一定要存在,可以是别名
+            String handlerTypeName = child.getStringAttribute("handler");
+            Class<?> typeHandlerClass = resolveClass(handlerTypeName);
+
+            if (javaTypeClass != null) {
+                //在设置了javaType之后,会走这个分支
+                if (jdbcType == null) {
+                  typeHandlerRegistry.register(javaTypeClass, typeHandlerClass);
+                } else {
+                    //如果JDBC也设置了,那么直接调用最终的注册方法
+                  typeHandlerRegistry.register(javaTypeClass, jdbcType, typeHandlerClass);
+                }
             } else {
-                //如果JDBC也设置了,那么直接调用最终的注册方法
-              typeHandlerRegistry.register(javaTypeClass, jdbcType, typeHandlerClass);
+                //如果javaTypeClass为NULL,则不考虑jdbcType的配置,直接只使用typeHandlerClass
+                typeHandlerRegistry.register(typeHandlerClass);
             }
-          } else {
-              //如果javaTypeClass为NULL,则不考虑jdbcType的配置,直接只使用typeHandlerClass
-            typeHandlerRegistry.register(typeHandlerClass);
-          }
         }
       }
     }

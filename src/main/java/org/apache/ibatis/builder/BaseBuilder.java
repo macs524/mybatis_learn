@@ -144,13 +144,15 @@ public abstract class BaseBuilder {
   }
 
     /**
-     * 解析转换器类型
+     * 这里返回的是一个实例,而不是一个类
      * @param javaType
      * @param typeHandlerType
      * @return
      */
   protected TypeHandler<?> resolveTypeHandler(Class<?> javaType, Class<? extends TypeHandler<?>> typeHandlerType) {
-    if (typeHandlerType == null) {
+
+      //如果typeHandlerType不为NULL,就一定会生成一个实例
+      if (typeHandlerType == null) {
       return null;
     }
     // javaType ignored for injected handlers see issue #746 for full detail

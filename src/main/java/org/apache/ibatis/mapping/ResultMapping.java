@@ -182,6 +182,8 @@ public class ResultMapping {
       //检查类型转换器是否为NULL
     private void resolveTypeHandler() {
       if (resultMapping.typeHandler == null && resultMapping.javaType != null) {
+          //如果这两者都为NULL呢,可不可能?  从目前看是不可能的,因为前面已经保证了javaType不为NULL
+          //所以正常来说, typeHandler也不会为NULL
         Configuration configuration = resultMapping.configuration;
         TypeHandlerRegistry typeHandlerRegistry = configuration.getTypeHandlerRegistry();
         resultMapping.typeHandler = typeHandlerRegistry.getTypeHandler(resultMapping.javaType, resultMapping.jdbcType);
