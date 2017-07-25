@@ -364,6 +364,13 @@ public class PooledDataSource implements DataSource {
     }
   }
 
+  /**
+   * 从池中获取一个连接。
+   * @param username
+   * @param password
+   * @return
+   * @throws SQLException
+   */
   private PooledConnection popConnection(String username, String password) throws SQLException {
     boolean countedWait = false;
     PooledConnection conn = null;

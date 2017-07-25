@@ -31,6 +31,7 @@ public final class LogFactory {
   private static Constructor<? extends Log> logConstructor;
 
   static {
+    //构造日志处理器，优先使用SLF4j
     tryImplementation(new Runnable() {
       @Override
       public void run() {

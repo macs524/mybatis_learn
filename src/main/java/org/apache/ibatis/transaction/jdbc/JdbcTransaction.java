@@ -101,6 +101,8 @@ public class JdbcTransaction implements Transaction {
 
   protected void setDesiredAutoCommit(boolean desiredAutoCommit) {
     try {
+
+      //设置自动提交模式
       if (connection.getAutoCommit() != desiredAutoCommit) {
         if (log.isDebugEnabled()) {
           log.debug("Setting autocommit to " + desiredAutoCommit + " on JDBC Connection [" + connection + "]");
@@ -141,8 +143,10 @@ public class JdbcTransaction implements Transaction {
     if (log.isDebugEnabled()) {
       log.debug("Opening JDBC Connection");
     }
+    //从DB中获取连接
     connection = dataSource.getConnection();
     if (level != null) {
+      //获取事务隔离级别
       connection.setTransactionIsolation(level.getLevel());
     }
     setDesiredAutoCommit(autoCommmit);

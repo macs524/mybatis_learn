@@ -58,23 +58,37 @@ public class DefaultParameterHandler implements ParameterHandler {
     return parameterObject;
   }
 
+  /**
+   * 设置参数，这一步相当关键，是参数和预执行语句相连接的地方
+   * @param ps ps
+   */
   @Override
   public void setParameters(PreparedStatement ps) {
     ErrorContext.instance().activity("setting parameters").object(mappedStatement.getParameterMap().getId());
+
+    //要按这样说的话，那么ParameterMapping就肯定不能为空了，才能够进行设置
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
+
     if (parameterMappings != null) {
+
+      //依次处理各个参数
       for (int i = 0; i < parameterMappings.size(); i++) {
         ParameterMapping parameterMapping = parameterMappings.get(i);
+
         if (parameterMapping.getMode() != ParameterMode.OUT) {
+          //只设置out参数
           Object value;
-          String propertyName = parameterMapping.getProperty();
-          if (boundSql.hasAdditionalParameter(propertyName)) { // issue #448 ask first for additional params
+          String propertyName = parameterMapping.getProperty(); //参数属性名，应该就是我们用#{}添加起来那些参数。
+
+          if (boundSql.hasAdditionalParameter(propertyName)) {
+            // issue #448 ask first for additional params
             value = boundSql.getAdditionalParameter(propertyName);
           } else if (parameterObject == null) {
             value = null;
           } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
             value = parameterObject;
           } else {
+            //这种情况，应该是表示参数是一个特定的对象。
             MetaObject metaObject = configuration.newMetaObject(parameterObject);
             value = metaObject.getValue(propertyName);
           }
