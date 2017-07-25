@@ -77,7 +77,7 @@ public class ProviderSqlSource implements SqlSource {
                       + "'. Sql provider method can not overload.");
             }
             this.providerMethod = m;
-            this.providerMethodArgumentNames = new ParamNameResolver(config, m).getNames();
+            this.providerMethodArgumentNames = new ParamNameResolver(config, m).getNames(); //之所以解析参数，是因为要执行方法。
           }
         }
       }

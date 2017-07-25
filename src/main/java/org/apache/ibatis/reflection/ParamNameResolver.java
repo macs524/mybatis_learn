@@ -128,24 +128,33 @@ public class ParamNameResolver {
    * </p>
    */
   public Object getNamedParams(Object[] args) {
+
+    //首先要确定下参数的个数
     final int paramCount = names.size();
     if (args == null || paramCount == 0) {
       return null;
     } else if (!hasParamAnnotation && paramCount == 1) {
+      //如果参数个为1，且没有声明注解，这个就比较好办了，不管参数名是什么，直接取出来作为参数即可。
       return args[names.firstKey()];
     } else {
+      //参数名和对应的参数值
       final Map<String, Object> param = new ParamMap<Object>();
       int i = 0;
       for (Map.Entry<Integer, String> entry : names.entrySet()) {
+
+        //key是index, 参数下标
         param.put(entry.getValue(), args[entry.getKey()]);
         // add generic param names (param1, param2, ...)
         final String genericParamName = GENERIC_NAME_PREFIX + String.valueOf(i + 1);
         // ensure not to overwrite parameter named with @Param
         if (!names.containsValue(genericParamName)) {
+          //如果名称中不包含这个，那么就将其放进去
           param.put(genericParamName, args[entry.getKey()]);
         }
         i++;
       }
+
+      //只要是多个参数的话，都会最终解析为一个Map，但是单个参数会特殊处理。
       return param;
     }
   }

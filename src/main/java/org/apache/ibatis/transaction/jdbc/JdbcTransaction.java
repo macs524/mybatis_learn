@@ -44,7 +44,12 @@ public class JdbcTransaction implements Transaction {
   protected TransactionIsolationLevel level;
   // MEMO: We are aware of the typo. See #941
   protected boolean autoCommmit;
-
+  /**
+   * 创建一个事务
+   * @param ds 数据源
+   * @param desiredLevel Desired isolation level 事务隔离级别（1-4）
+   * @param desiredAutoCommit Desired autocommit 是否需要自动提交
+   */
   public JdbcTransaction(DataSource ds, TransactionIsolationLevel desiredLevel, boolean desiredAutoCommit) {
     dataSource = ds;
     level = desiredLevel;

@@ -62,6 +62,11 @@ public abstract class BaseExecutor implements Executor {
   protected int queryStack;
   private boolean closed;
 
+  /**
+   * 构造函数
+   * @param configuration 配置对象 ，有了配置就有了一切
+   * @param transaction 事务对象
+   */
   protected BaseExecutor(Configuration configuration, Transaction transaction) {
     this.transaction = transaction;
     this.deferredLoads = new ConcurrentLinkedQueue<DeferredLoad>();
@@ -114,6 +119,7 @@ public abstract class BaseExecutor implements Executor {
       throw new ExecutorException("Executor was closed.");
     }
     clearLocalCache();
+    //做更新操作
     return doUpdate(ms, parameter);
   }
 

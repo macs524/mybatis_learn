@@ -33,6 +33,7 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 
 /**
+ * 缓存执行器
  * @author Clinton Begin
  * @author Eduardo Macarron
  */
@@ -41,6 +42,10 @@ public class CachingExecutor implements Executor {
   private final Executor delegate;
   private final TransactionalCacheManager tcm = new TransactionalCacheManager();
 
+  /**
+   * 使自己成为被代理对象的包装类型
+   * @param delegate 代理对象
+   */
   public CachingExecutor(Executor delegate) {
     this.delegate = delegate;
     delegate.setExecutorWrapper(this);
@@ -161,6 +166,7 @@ public class CachingExecutor implements Executor {
     delegate.clearLocalCache();
   }
 
+  //清空缓存
   private void flushCacheIfRequired(MappedStatement ms) {
     Cache cache = ms.getCache();
     if (cache != null && ms.isFlushCacheRequired()) {      

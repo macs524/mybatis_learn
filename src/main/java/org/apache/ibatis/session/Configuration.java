@@ -88,6 +88,9 @@ public class Configuration {
   protected boolean multipleResultSetsEnabled = true;
   protected boolean useGeneratedKeys;
   protected boolean useColumnLabel = true;
+  /**
+   * 是否开启缓存，默认为true
+   */
   protected boolean cacheEnabled = true;
   protected boolean callSettersOnNulls;
   protected boolean useActualParamName = true;
@@ -528,6 +531,13 @@ public class Configuration {
     return MetaObject.forObject(object, objectFactory, objectWrapperFactory, reflectorFactory);
   }
 
+  /**
+   * 构造参数处理器
+   * @param mappedStatement
+   * @param parameterObject
+   * @param boundSql
+   * @return
+   */
   public ParameterHandler newParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
     ParameterHandler parameterHandler = mappedStatement.getLang().createParameterHandler(mappedStatement, parameterObject, boundSql);
     parameterHandler = (ParameterHandler) interceptorChain.pluginAll(parameterHandler);
@@ -541,6 +551,16 @@ public class Configuration {
     return resultSetHandler;
   }
 
+  /**
+   * 创建一个语句处理器
+   * @param executor 执行器
+   * @param mappedStatement 语句对象
+   * @param parameterObject 参数对象
+   * @param rowBounds 分页
+   * @param resultHandler 结果处理器
+   * @param boundSql SQL
+   * @return 结果
+   */
   public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
     StatementHandler statementHandler = new RoutingStatementHandler(executor, mappedStatement, parameterObject, rowBounds, resultHandler, boundSql);
     statementHandler = (StatementHandler) interceptorChain.pluginAll(statementHandler);
@@ -551,21 +571,40 @@ public class Configuration {
     return newExecutor(transaction, defaultExecutorType);
   }
 
+  /**
+   * 创建一个执行器
+   * @param transaction 事务
+   * @param executorType 执行器类型
+   * @return
+   */
   public Executor newExecutor(Transaction transaction, ExecutorType executorType) {
+
+    /**
+     * 保证执行器不会为NULL，默认为SIMPLE
+     */
     executorType = executorType == null ? defaultExecutorType : executorType;
     executorType = executorType == null ? ExecutorType.SIMPLE : executorType;
+
     Executor executor;
+
+    //根据不同的类型来创建不同的执行器
     if (ExecutorType.BATCH == executorType) {
       executor = new BatchExecutor(this, transaction);
     } else if (ExecutorType.REUSE == executorType) {
       executor = new ReuseExecutor(this, transaction);
     } else {
+      //配置及事务对象
       executor = new SimpleExecutor(this, transaction);
     }
     if (cacheEnabled) {
+      //是否启用缓存，默认情况下是启用的
       executor = new CachingExecutor(executor);
     }
+
+    //完成拦截操作，也就是说拦截器是可以对执行器进行处理的
     executor = (Executor) interceptorChain.pluginAll(executor);
+
+
     return executor;
   }
 
@@ -734,6 +773,13 @@ public class Configuration {
     mapperRegistry.addMapper(type);
   }
 
+  /**
+   * 获取Mapper实例
+   * @param type 类型，这个是必须的
+   * @param sqlSession sqlSession， 这里面有执行器，所以也是必须的
+   * @param <T> 泛型对象
+   * @return Mapper结果
+   */
   public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
     return mapperRegistry.getMapper(type, sqlSession);
   }
@@ -746,6 +792,12 @@ public class Configuration {
     return hasStatement(statementName, true);
   }
 
+  /**
+   * 判断缓存中是否有对应的语句
+   * @param statementName 语句名
+   * @param validateIncompleteStatements 是否校验
+   * @return 结果
+   */
   public boolean hasStatement(String statementName, boolean validateIncompleteStatements) {
     if (validateIncompleteStatements) {
       buildAllStatements();

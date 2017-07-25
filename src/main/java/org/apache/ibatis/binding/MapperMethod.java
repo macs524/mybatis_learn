@@ -44,16 +44,32 @@ public class MapperMethod {
   private final SqlCommand command;
   private final MethodSignature method;
 
+  /**
+   * 具体的方法对象
+   * @param mapperInterface Mapper接口
+   * @param method 方法
+   * @param config 配置
+   */
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
     this.command = new SqlCommand(config, mapperInterface, method);
     this.method = new MethodSignature(config, mapperInterface, method);
   }
 
+  /**
+   * 执行，这是最终的执行者
+   *
+   * 终于开始执行了。
+   * @param sqlSession session
+   * @param args 参数
+   * @return 结果
+   */
   public Object execute(SqlSession sqlSession, Object[] args) {
     Object result;
     switch (command.getType()) {
       case INSERT: {
     	Object param = method.convertArgsToSqlCommandParam(args);
+
+    	//name表示语句ID
         result = rowCountResult(sqlSession.insert(command.getName(), param));
         break;
       }
@@ -211,20 +227,30 @@ public class MapperMethod {
     private final String name;
     private final SqlCommandType type;
 
+    /**
+     * 构造SqlCommand对象
+     * @param configuration 全局配置
+     * @param mapperInterface 接口
+     * @param method 方法
+     */
     public SqlCommand(Configuration configuration, Class<?> mapperInterface, Method method) {
-      final String methodName = method.getName();
+      final String methodName = method.getName(); //找到方法名
       final Class<?> declaringClass = method.getDeclaringClass();
       MappedStatement ms = resolveMappedStatement(mapperInterface, methodName, declaringClass,
           configuration);
       if (ms == null) {
+        //这里的意思是，如果加了@Flush注解，则可以没有对应的语句
         if (method.getAnnotation(Flush.class) != null) {
           name = null;
           type = SqlCommandType.FLUSH;
         } else {
+          //否则为空就有问题了
           throw new BindingException("Invalid bound statement (not found): "
               + mapperInterface.getName() + "." + methodName);
         }
       } else {
+
+        //找到ID和Sql类型
         name = ms.getId();
         type = ms.getSqlCommandType();
         if (type == SqlCommandType.UNKNOWN) {
@@ -241,10 +267,22 @@ public class MapperMethod {
       return type;
     }
 
+    /**
+     * 根据方法找到对应的语句
+     * @param mapperInterface Mapper接口
+     * @param methodName 方法名
+     * @param declaringClass 声明类
+     * @param configuration 配置对象
+     * @return
+     */
     private MappedStatement resolveMappedStatement(Class<?> mapperInterface, String methodName,
         Class<?> declaringClass, Configuration configuration) {
+
+      //类名加方法名，类名应该是带上了包名的
       String statementId = mapperInterface.getName() + "." + methodName;
+
       if (configuration.hasStatement(statementId)) {
+        //有则返回，正常来说，只要定义了就应该返回
         return configuration.getMappedStatement(statementId);
       } else if (mapperInterface.equals(declaringClass)) {
         return null;
@@ -274,7 +312,15 @@ public class MapperMethod {
     private final Integer rowBoundsIndex;
     private final ParamNameResolver paramNameResolver;
 
+    /**
+     * 方法签名
+     * @param configuration 配置对象
+     * @param mapperInterface 接口
+     * @param method 方法
+     */
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {
+
+      //1. 解析参数，这个没看出来什么意思
       Type resolvedReturnType = TypeParameterResolver.resolveReturnType(method, mapperInterface);
       if (resolvedReturnType instanceof Class<?>) {
         this.returnType = (Class<?>) resolvedReturnType;
@@ -283,16 +329,28 @@ public class MapperMethod {
       } else {
         this.returnType = method.getReturnType();
       }
+
+      //判断返回值的类型
       this.returnsVoid = void.class.equals(this.returnType);
       this.returnsMany = (configuration.getObjectFactory().isCollection(this.returnType) || this.returnType.isArray());
       this.returnsCursor = Cursor.class.equals(this.returnType);
+
+
       this.mapKey = getMapKey(method);
       this.returnsMap = (this.mapKey != null);
+
+      //找到这两个特殊类型的下标，有可能没有
       this.rowBoundsIndex = getUniqueParamIndex(method, RowBounds.class);
       this.resultHandlerIndex = getUniqueParamIndex(method, ResultHandler.class);
+
       this.paramNameResolver = new ParamNameResolver(configuration, method);
     }
 
+    /**
+     * 来看一下这个参数最终是怎么解析的。
+     * @param args 参数
+     * @return 结果
+     */
     public Object convertArgsToSqlCommandParam(Object[] args) {
       return paramNameResolver.getNamedParams(args);
     }
@@ -352,6 +410,11 @@ public class MapperMethod {
       return index;
     }
 
+    /**
+     * 查找mapKey, 但感觉这个一般不会设置
+     * @param method
+     * @return
+     */
     private String getMapKey(Method method) {
       String mapKey = null;
       if (Map.class.isAssignableFrom(method.getReturnType())) {

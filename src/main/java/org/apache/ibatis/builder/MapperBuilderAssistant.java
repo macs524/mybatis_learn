@@ -327,7 +327,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .resultSets(resultSets)
         .resultMaps(getStatementResultMaps(resultMap, resultType, id))
         .resultSetType(resultSetType)
-        .flushCacheRequired(valueOrDefault(flushCache, !isSelect))
+        .flushCacheRequired(valueOrDefault(flushCache, !isSelect)) //是否清除缓存，由flushCache来决定，默认是要清除缓存的。（只要不是select)
         .useCache(valueOrDefault(useCache, isSelect))
         .cache(currentCache);
 

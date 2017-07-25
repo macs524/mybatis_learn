@@ -55,6 +55,12 @@ public class DefaultSqlSession implements SqlSession {
   private boolean dirty;
   private List<Cursor<?>> cursorList;
 
+  /**
+   * 最终创建了一个Session对象
+   * @param configuration 配置
+   * @param executor 执行器
+   * @param autoCommit 是否自动提交
+   */
   public DefaultSqlSession(Configuration configuration, Executor executor, boolean autoCommit) {
     this.configuration = configuration;
     this.executor = executor;
@@ -180,8 +186,15 @@ public class DefaultSqlSession implements SqlSession {
     return insert(statement, null);
   }
 
+  /**
+   * 添加操作
+   * @param statement Unique identifier matching the statement to execute.
+   * @param parameter A parameter object to pass to the statement.
+   * @return 操作影响的SQL条数
+   */
   @Override
   public int insert(String statement, Object parameter) {
+    //实际上也就是一个更新操作
     return update(statement, parameter);
   }
 
@@ -287,6 +300,15 @@ public class DefaultSqlSession implements SqlSession {
     return configuration;
   }
 
+  /**
+   * 首先我们从这里开始分析，因为这是最普通用到的一个方法，获取一个查询器
+   *
+   * 比如 RoleMapper roleMapper = session.getMapper(RoleMapper.class);
+   *
+   * @param type Mapper interface class
+   * @param <T>
+   * @return
+   */
   @Override
   public <T> T getMapper(Class<T> type) {
     return configuration.<T>getMapper(type, this);
@@ -317,7 +339,14 @@ public class DefaultSqlSession implements SqlSession {
     return (!autoCommit && dirty) || force;
   }
 
+  /**
+   * 对参数进行包装
+   * @param object 原参数
+   * @return 参数
+   */
   private Object wrapCollection(final Object object) {
+
+    //如果是集合类，或者是数组，则将其也转化为一个Map
     if (object instanceof Collection) {
       StrictMap<Object> map = new StrictMap<Object>();
       map.put("collection", object);

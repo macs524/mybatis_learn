@@ -50,6 +50,15 @@ public abstract class BaseStatementHandler implements StatementHandler {
 
   protected BoundSql boundSql;
 
+  /**
+   * 构造语句处理器
+   * @param executor 执行器
+   * @param mappedStatement 语句对象
+   * @param parameterObject 参数
+   * @param rowBounds 分页对象
+   * @param resultHandler 结果处理器
+   * @param boundSql SQL
+   */
   protected BaseStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
     this.configuration = mappedStatement.getConfiguration();
     this.executor = executor;
@@ -66,7 +75,10 @@ public abstract class BaseStatementHandler implements StatementHandler {
 
     this.boundSql = boundSql;
 
+    //最主要是为了解决如何将参数设置到语句上
     this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
+
+    //结果处理器
     this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, rowBounds, parameterHandler, resultHandler, boundSql);
   }
 
@@ -135,6 +147,10 @@ public abstract class BaseStatementHandler implements StatementHandler {
     }
   }
 
+  /**
+   * 生成主键
+   * @param parameter 参数
+   */
   protected void generateKeys(Object parameter) {
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
     ErrorContext.instance().store();

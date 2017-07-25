@@ -87,14 +87,33 @@ public class DefaultSqlSessionFactory implements SqlSessionFactory {
     return configuration;
   }
 
+  /**
+   * 创建一个Session, 这是执行SQL的第一部
+   * @param execType 执行器，从配置对象中获取，这是一个枚举类型，默认情况下，应该是SIMPLE
+   * @param level 事务隔离级别，默认调用为NULL
+   * @param autoCommit 是否自动提交， 如果是直接调用openSession()的话，自动提交是null， 所以这就是为什么每次都要commit的原因
+   * @return 创建sqlSession.
+   */
   private SqlSession openSessionFromDataSource(ExecutorType execType, TransactionIsolationLevel level, boolean autoCommit) {
     Transaction tx = null;
     try {
+      //环境配置，如果在config.xml中没有指定的话，则为NULL
       final Environment environment = configuration.getEnvironment();
+      //这个不会是NULL，直接创建
       final TransactionFactory transactionFactory = getTransactionFactoryFromEnvironment(environment);
+
+      //从这条语句来看， environment一定不为NULL，要不然就出事了
+      //不过这也很正常，如果没有配置environment, 怎么指定dataSource的配置信息，
+      // 如果不指定dataSource的配置信息，那又怎么操作数据库？
+      // 所以， 这里正常来说， transactionFactory, environment, datasource 都不应该是NULL
       tx = transactionFactory.newTransaction(environment.getDataSource(), level, autoCommit);
+      //创建了一个执行器对象
       final Executor executor = configuration.newExecutor(tx, execType);
+
+      //最终是创建了一个新对象
       return new DefaultSqlSession(configuration, executor, autoCommit);
+
+      //这个创建了，后面就开始真正干活了。
     } catch (Exception e) {
       closeTransaction(tx); // may have fetched a connection so lets call close()
       throw ExceptionFactory.wrapException("Error opening session.  Cause: " + e, e);
@@ -125,10 +144,19 @@ public class DefaultSqlSessionFactory implements SqlSessionFactory {
     }
   }
 
+  /**
+   * 获取TransactionFactory， 由环境决定
+   * @param environment 环境
+   * @return
+   */
   private TransactionFactory getTransactionFactoryFromEnvironment(Environment environment) {
     if (environment == null || environment.getTransactionFactory() == null) {
+
+      //默认是ManagedTransactionFactory, 这倒是有点奇怪
       return new ManagedTransactionFactory();
     }
+
+    //否则取指定的
     return environment.getTransactionFactory();
   }
 
