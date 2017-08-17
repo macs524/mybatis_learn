@@ -34,7 +34,7 @@ import org.apache.ibatis.logging.LogFactory;
 
 /**
  * This is a simple, synchronous, thread-safe database connection pool.
- *
+ * 这是一个小巧精致的线程池实现，我们通过分析源码，学习一下线程池有哪些要素，需要怎么写。
  * @author Clinton Begin
  */
 public class PooledDataSource implements DataSource {
@@ -46,16 +46,18 @@ public class PooledDataSource implements DataSource {
   private final UnpooledDataSource dataSource;
 
   // OPTIONAL CONFIGURATION FIELDS
-  protected int poolMaximumActiveConnections = 10;
-  protected int poolMaximumIdleConnections = 5;
-  protected int poolMaximumCheckoutTime = 20000;
-  protected int poolTimeToWait = 20000;
-  protected String poolPingQuery = "NO PING QUERY SET";
-  protected boolean poolPingEnabled;
+  protected int poolMaximumActiveConnections = 10; // 最大活跃连接数
+  protected int poolMaximumIdleConnections = 5; //最大空闲连接数
+  protected int poolMaximumCheckoutTime = 20000; //最大检查时间
+  protected int poolTimeToWait = 20000; //最长等待时间
+  protected String poolPingQuery = "NO PING QUERY SET"; //PING查询命令
+  protected boolean poolPingEnabled; //是否允许PING
   protected int poolPingConnectionsNotUsedFor;
 
   private int expectedConnectionTypeCode;
 
+
+  //构造函数
   public PooledDataSource() {
     dataSource = new UnpooledDataSource();
   }
@@ -321,6 +323,13 @@ public class PooledDataSource implements DataSource {
     return state;
   }
 
+  /**
+   * 连接的HASH CODE
+   * @param url
+   * @param username
+   * @param password
+   * @return
+   */
   private int assembleConnectionTypeCode(String url, String username, String password) {
     return ("" + url + username + password).hashCode();
   }
@@ -365,23 +374,25 @@ public class PooledDataSource implements DataSource {
   }
 
   /**
-   * 从池中获取一个连接。
-   * @param username
-   * @param password
+   * 从池中获取一个连接。 这是个关键实现
+   * @param username 用户名
+   * @param password 密码
    * @return
    * @throws SQLException
    */
   private PooledConnection popConnection(String username, String password) throws SQLException {
     boolean countedWait = false;
     PooledConnection conn = null;
-    long t = System.currentTimeMillis();
+    long t = System.currentTimeMillis(); //当前时间
     int localBadConnectionCount = 0;
 
     while (conn == null) {
+
       synchronized (state) {
         if (!state.idleConnections.isEmpty()) {
+          //1.1 池里有空闲的连接，再好不过
           // Pool has available connection
-          conn = state.idleConnections.remove(0);
+          conn = state.idleConnections.remove(0); //直接从队列里取出来
           if (log.isDebugEnabled()) {
             log.debug("Checked out connection " + conn.getRealHashCode() + " from pool.");
           }
@@ -436,17 +447,21 @@ public class PooledDataSource implements DataSource {
             }
           }
         }
+
+        //取到conn 之后的处理
         if (conn != null) {
           if (conn.isValid()) {
             if (!conn.getRealConnection().getAutoCommit()) {
-              conn.getRealConnection().rollback();
+              conn.getRealConnection().rollback(); //为什么要rollback()
             }
             conn.setConnectionTypeCode(assembleConnectionTypeCode(dataSource.getUrl(), username, password));
             conn.setCheckoutTimestamp(System.currentTimeMillis());
-            conn.setLastUsedTimestamp(System.currentTimeMillis());
+            conn.setLastUsedTimestamp(System.currentTimeMillis()); //连接在使用了，更新其最后一次使用时间
+
+
             state.activeConnections.add(conn);
             state.requestCount++;
-            state.accumulatedRequestTime += System.currentTimeMillis() - t;
+            state.accumulatedRequestTime += System.currentTimeMillis() - t; //累加本次请求的时长
           } else {
             if (log.isDebugEnabled()) {
               log.debug("A bad connection (" + conn.getRealHashCode() + ") was returned from the pool, getting another connection.");
@@ -461,14 +476,14 @@ public class PooledDataSource implements DataSource {
               throw new SQLException("PooledDataSource: Could not get a good connection to the database.");
             }
           }
-        }
-      }
+        }//conn != null
+      }//synchronized
 
-    }
+    }// while
 
     if (conn == null) {
       if (log.isDebugEnabled()) {
-        log.debug("PooledDataSource: Unknown severe error condition.  The connection pool returned a null connection.");
+        log.debug("PooledDataSource: Unknown server error condition.  The connection pool returned a null connection.");
       }
       throw new SQLException("PooledDataSource: Unknown severe error condition.  The connection pool returned a null connection.");
     }
