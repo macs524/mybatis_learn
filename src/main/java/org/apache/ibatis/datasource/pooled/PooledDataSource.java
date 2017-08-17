@@ -390,15 +390,17 @@ public class PooledDataSource implements DataSource {
 
       synchronized (state) {
         if (!state.idleConnections.isEmpty()) {
-          //1.1 池里有空闲的连接，再好不过
+          //1 池里有空闲的连接，再好不过
           // Pool has available connection
           conn = state.idleConnections.remove(0); //直接从队列里取出来
           if (log.isDebugEnabled()) {
             log.debug("Checked out connection " + conn.getRealHashCode() + " from pool.");
           }
         } else {
+          //2 池里没有空闲的连接，那么要么创建一个，要么想其它办法
           // Pool does not have available connection
           if (state.activeConnections.size() < poolMaximumActiveConnections) {
+            //2.1 当前有效的连接个数还没有达到上限，那么就直接创建一个新的。
             // Can create new connection
             conn = new PooledConnection(dataSource.getConnection(), this);
             if (log.isDebugEnabled()) {
@@ -406,14 +408,21 @@ public class PooledDataSource implements DataSource {
             }
           } else {
             // Cannot create new connection
+            //2.2 不能创建新的了，那就看有没有过期的。
+
+            //先找到活跃列表里最早的那一个连接
             PooledConnection oldestActiveConnection = state.activeConnections.get(0);
+            //获取其检查时间
             long longestCheckoutTime = oldestActiveConnection.getCheckoutTime();
+
             if (longestCheckoutTime > poolMaximumCheckoutTime) {
+              //2.2.1 如果其检查时间超过了最长的检查时间，那么我们可以认为这个活跃的连接已经失效了。
               // Can claim overdue connection
-              state.claimedOverdueConnectionCount++;
-              state.accumulatedCheckoutTimeOfOverdueConnections += longestCheckoutTime;
-              state.accumulatedCheckoutTime += longestCheckoutTime;
-              state.activeConnections.remove(oldestActiveConnection);
+              state.claimedOverdueConnectionCount++; //过期的连接数加1
+              state.accumulatedCheckoutTimeOfOverdueConnections += longestCheckoutTime; //累计的过期时间增加
+              state.accumulatedCheckoutTime += longestCheckoutTime; //累计的检查时间增加，这两个不是一样的吗？
+
+              state.activeConnections.remove(oldestActiveConnection); //将其移除
               if (!oldestActiveConnection.getRealConnection().getAutoCommit()) {
                 try {
                   oldestActiveConnection.getRealConnection().rollback();
@@ -421,17 +430,25 @@ public class PooledDataSource implements DataSource {
                   log.debug("Bad connection. Could not roll back");
                 }  
               }
+
+              //创建一个新的代理，但并不是要创建一个新的连接
               conn = new PooledConnection(oldestActiveConnection.getRealConnection(), this);
               conn.setCreatedTimestamp(oldestActiveConnection.getCreatedTimestamp());
               conn.setLastUsedTimestamp(oldestActiveConnection.getLastUsedTimestamp());
+
+              //使旧的连接失效
               oldestActiveConnection.invalidate();
               if (log.isDebugEnabled()) {
                 log.debug("Claimed overdue connection " + conn.getRealHashCode() + ".");
               }
+
+
             } else {
               // Must wait
+              // 2.2.2 活跃列表都还没有过期的，则只有等待了。
               try {
                 if (!countedWait) {
+                  //如果还没有记数，则记一次
                   state.hadToWaitCount++;
                   countedWait = true;
                 }
@@ -439,8 +456,9 @@ public class PooledDataSource implements DataSource {
                   log.debug("Waiting as long as " + poolTimeToWait + " milliseconds for connection.");
                 }
                 long wt = System.currentTimeMillis();
-                state.wait(poolTimeToWait);
-                state.accumulatedWaitTime += System.currentTimeMillis() - wt;
+                state.wait(poolTimeToWait); // 等待20秒
+                state.accumulatedWaitTime += System.currentTimeMillis() - wt; //记录下本次的等待时间。
+                //等待20秒之后，会被中断吗？
               } catch (InterruptedException e) {
                 break;
               }
@@ -459,7 +477,7 @@ public class PooledDataSource implements DataSource {
             conn.setLastUsedTimestamp(System.currentTimeMillis()); //连接在使用了，更新其最后一次使用时间
 
 
-            state.activeConnections.add(conn);
+            state.activeConnections.add(conn); //放到活跃列表里
             state.requestCount++;
             state.accumulatedRequestTime += System.currentTimeMillis() - t; //累加本次请求的时长
           } else {
