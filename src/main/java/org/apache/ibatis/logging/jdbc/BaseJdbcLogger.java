@@ -31,6 +31,8 @@ import org.apache.ibatis.reflection.ArrayUtil;
 
 /**
  * Base class for proxies to do logging
+ *
+ * 这个日志处理器主要用来记录SQL相关的日志
  * 
  * @author Clinton Begin
  * @author Eduardo Macarron

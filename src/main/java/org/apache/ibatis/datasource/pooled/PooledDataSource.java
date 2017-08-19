@@ -15,21 +15,26 @@
  */
 package org.apache.ibatis.datasource.pooled;
 
+import java.io.PrintWriter;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
+import java.util.logging.Logger;
+
+import javax.sql.DataSource;
+
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
 import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 
-import javax.sql.DataSource;
-import java.io.PrintWriter;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
-import java.sql.*;
-import java.util.Properties;
-import java.util.logging.Logger;
-
 /**
  * This is a simple, synchronous, thread-safe database connection pool.
- *
+ * 这是一个小巧精致的线程池实现，我们通过分析源码，学习一下线程池有哪些要素，需要怎么写。
  * @author Clinton Begin
  */
 public class PooledDataSource implements DataSource {
@@ -41,16 +46,18 @@ public class PooledDataSource implements DataSource {
   private final UnpooledDataSource dataSource;
 
   // OPTIONAL CONFIGURATION FIELDS
-  protected int poolMaximumActiveConnections = 10;
-  protected int poolMaximumIdleConnections = 5;
-  protected int poolMaximumCheckoutTime = 20000;
-  protected int poolTimeToWait = 20000;
-  protected String poolPingQuery = "NO PING QUERY SET";
-  protected boolean poolPingEnabled;
+  protected int poolMaximumActiveConnections = 10; // 最大活跃连接数
+  protected int poolMaximumIdleConnections = 5; //最大空闲连接数
+  protected int poolMaximumCheckoutTime = 20000; //最大检查时间
+  protected int poolTimeToWait = 20000; //最长等待时间
+  protected String poolPingQuery = "NO PING QUERY SET"; //PING查询命令
+  protected boolean poolPingEnabled; //是否允许PING
   protected int poolPingConnectionsNotUsedFor;
 
   private int expectedConnectionTypeCode;
 
+
+  //构造函数
   public PooledDataSource() {
     dataSource = new UnpooledDataSource();
   }
@@ -316,6 +323,13 @@ public class PooledDataSource implements DataSource {
     return state;
   }
 
+  /**
+   * 连接的HASH CODE
+   * @param url
+   * @param username
+   * @param password
+   * @return
+   */
   private int assembleConnectionTypeCode(String url, String username, String password) {
     return ("" + url + username + password).hashCode();
   }
@@ -360,7 +374,7 @@ public class PooledDataSource implements DataSource {
   }
 
   /**
-   * 从池中获取一个连接。
+   * 从池中获取一个连接。 这是个关键实现
    * @param username 用户名
    * @param password 密码
    * @return
@@ -369,20 +383,24 @@ public class PooledDataSource implements DataSource {
   private PooledConnection popConnection(String username, String password) throws SQLException {
     boolean countedWait = false;
     PooledConnection conn = null;
-    long t = System.currentTimeMillis();
+    long t = System.currentTimeMillis(); //当前时间
     int localBadConnectionCount = 0;
 
     while (conn == null) {
+
       synchronized (state) {
         if (!state.idleConnections.isEmpty()) {
+          //1 池里有空闲的连接，再好不过
           // Pool has available connection
-          conn = state.idleConnections.remove(0);
+          conn = state.idleConnections.remove(0); //直接从队列里取出来
           if (log.isDebugEnabled()) {
             log.debug("Checked out connection " + conn.getRealHashCode() + " from pool.");
           }
         } else {
+          //2 池里没有空闲的连接，那么要么创建一个，要么想其它办法
           // Pool does not have available connection
           if (state.activeConnections.size() < poolMaximumActiveConnections) {
+            //2.1 当前有效的连接个数还没有达到上限，那么就直接创建一个新的。
             // Can create new connection
             conn = new PooledConnection(dataSource.getConnection(), this);
             if (log.isDebugEnabled()) {
@@ -390,14 +408,21 @@ public class PooledDataSource implements DataSource {
             }
           } else {
             // Cannot create new connection
+            //2.2 不能创建新的了，那就看有没有过期的。
+
+            //先找到活跃列表里最早的那一个连接
             PooledConnection oldestActiveConnection = state.activeConnections.get(0);
+            //获取其检查时间
             long longestCheckoutTime = oldestActiveConnection.getCheckoutTime();
+
             if (longestCheckoutTime > poolMaximumCheckoutTime) {
+              //2.2.1 如果其检查时间超过了最长的检查时间，那么我们可以认为这个活跃的连接已经失效了。
               // Can claim overdue connection
-              state.claimedOverdueConnectionCount++;
-              state.accumulatedCheckoutTimeOfOverdueConnections += longestCheckoutTime;
-              state.accumulatedCheckoutTime += longestCheckoutTime;
-              state.activeConnections.remove(oldestActiveConnection);
+              state.claimedOverdueConnectionCount++; //过期的连接数加1
+              state.accumulatedCheckoutTimeOfOverdueConnections += longestCheckoutTime; //累计的过期时间增加
+              state.accumulatedCheckoutTime += longestCheckoutTime; //累计的检查时间增加，这两个不是一样的吗？
+
+              state.activeConnections.remove(oldestActiveConnection); //将其移除
               if (!oldestActiveConnection.getRealConnection().getAutoCommit()) {
                 try {
                   oldestActiveConnection.getRealConnection().rollback();
@@ -405,17 +430,25 @@ public class PooledDataSource implements DataSource {
                   log.debug("Bad connection. Could not roll back");
                 }  
               }
+
+              //创建一个新的代理，但并不是要创建一个新的连接
               conn = new PooledConnection(oldestActiveConnection.getRealConnection(), this);
               conn.setCreatedTimestamp(oldestActiveConnection.getCreatedTimestamp());
               conn.setLastUsedTimestamp(oldestActiveConnection.getLastUsedTimestamp());
+
+              //使旧的连接失效
               oldestActiveConnection.invalidate();
               if (log.isDebugEnabled()) {
                 log.debug("Claimed overdue connection " + conn.getRealHashCode() + ".");
               }
+
+
             } else {
               // Must wait
+              // 2.2.2 活跃列表都还没有过期的，则只有等待了。
               try {
                 if (!countedWait) {
+                  //如果还没有记数，则记一次
                   state.hadToWaitCount++;
                   countedWait = true;
                 }
@@ -423,8 +456,9 @@ public class PooledDataSource implements DataSource {
                   log.debug("Waiting as long as " + poolTimeToWait + " milliseconds for connection.");
                 }
                 long wt = System.currentTimeMillis();
-                state.wait(poolTimeToWait);
-                state.accumulatedWaitTime += System.currentTimeMillis() - wt;
+                state.wait(poolTimeToWait); // 等待20秒
+                state.accumulatedWaitTime += System.currentTimeMillis() - wt; //记录下本次的等待时间。
+                //等待20秒之后，会被中断吗？
               } catch (InterruptedException e) {
                 break;
               }
@@ -432,18 +466,20 @@ public class PooledDataSource implements DataSource {
           }
         }
 
-
+        //取到conn 之后的处理
         if (conn != null) {
           if (conn.isValid()) {
             if (!conn.getRealConnection().getAutoCommit()) {
-              conn.getRealConnection().rollback();
+              conn.getRealConnection().rollback(); //为什么要rollback()
             }
             conn.setConnectionTypeCode(assembleConnectionTypeCode(dataSource.getUrl(), username, password));
             conn.setCheckoutTimestamp(System.currentTimeMillis());
-            conn.setLastUsedTimestamp(System.currentTimeMillis());
-            state.activeConnections.add(conn);
+            conn.setLastUsedTimestamp(System.currentTimeMillis()); //连接在使用了，更新其最后一次使用时间
+
+
+            state.activeConnections.add(conn); //放到活跃列表里
             state.requestCount++;
-            state.accumulatedRequestTime += System.currentTimeMillis() - t;
+            state.accumulatedRequestTime += System.currentTimeMillis() - t; //累加本次请求的时长
           } else {
             if (log.isDebugEnabled()) {
               log.debug("A bad connection (" + conn.getRealHashCode() + ") was returned from the pool, getting another connection.");
@@ -458,14 +494,14 @@ public class PooledDataSource implements DataSource {
               throw new SQLException("PooledDataSource: Could not get a good connection to the database.");
             }
           }
-        }
-      }//syncnized
+        }//conn != null
+      }//synchronized
 
-    }
+    }// while
 
     if (conn == null) {
       if (log.isDebugEnabled()) {
-        log.debug("PooledDataSource: Unknown severe error condition.  The connection pool returned a null connection.");
+        log.debug("PooledDataSource: Unknown server error condition.  The connection pool returned a null connection.");
       }
       throw new SQLException("PooledDataSource: Unknown severe error condition.  The connection pool returned a null connection.");
     }

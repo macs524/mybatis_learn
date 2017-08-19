@@ -19,21 +19,53 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 线程池状态， 总的来说这只是一个状态类，保存了一些统计数据的getter/setter方法
  * @author Clinton Begin
  */
 public class PoolState {
-
+  /**
+   * 数据源对象
+   */
   protected PooledDataSource dataSource;
-
+  /**
+   * 空闲的连接
+   */
   protected final List<PooledConnection> idleConnections = new ArrayList<PooledConnection>();
+  /**
+   * 活跃的连接
+   */
   protected final List<PooledConnection> activeConnections = new ArrayList<PooledConnection>();
+  /**
+   * 请求数
+   */
   protected long requestCount = 0;
+  /**
+   * 累计请求时长
+   */
   protected long accumulatedRequestTime = 0;
+  /**
+   * 累计检查时长
+   */
   protected long accumulatedCheckoutTime = 0;
+  /**
+   * 已声明的过期的连接数量
+   */
   protected long claimedOverdueConnectionCount = 0;
+  /**
+   * 累计的过期的连接数的检查时长
+   */
   protected long accumulatedCheckoutTimeOfOverdueConnections = 0;
+  /**
+   * 累计等待时长
+   */
   protected long accumulatedWaitTime = 0;
+  /**
+   * 需要等待的个数
+   */
   protected long hadToWaitCount = 0;
+  /**
+   * 无效连接的个数
+   */
   protected long badConnectionCount = 0;
 
   public PoolState(PooledDataSource dataSource) {
@@ -44,10 +76,18 @@ public class PoolState {
     return requestCount;
   }
 
+  /**
+   * 平均请求时长
+   * @return
+   */
   public synchronized long getAverageRequestTime() {
     return requestCount == 0 ? 0 : accumulatedRequestTime / requestCount;
   }
 
+  /**
+   * 平均等待时长
+   * @return
+   */
   public synchronized long getAverageWaitTime() {
     return hadToWaitCount == 0 ? 0 : accumulatedWaitTime / hadToWaitCount;
 
@@ -65,10 +105,18 @@ public class PoolState {
     return claimedOverdueConnectionCount;
   }
 
+  /**
+   * 平均过期检查时长
+   * @return
+   */
   public synchronized long getAverageOverdueCheckoutTime() {
     return claimedOverdueConnectionCount == 0 ? 0 : accumulatedCheckoutTimeOfOverdueConnections / claimedOverdueConnectionCount;
   }
 
+  /**
+   * 平均检查时长
+   * @return
+   */
   public synchronized long getAverageCheckoutTime() {
     return requestCount == 0 ? 0 : accumulatedCheckoutTime / requestCount;
   }

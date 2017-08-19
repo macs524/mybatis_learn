@@ -62,6 +62,7 @@ public final class LogFactory {
         useJdkLogging();
       }
     });
+    // 如果上述的都初始化失败，最后初始化一个默认的。
     tryImplementation(new Runnable() {
       @Override
       public void run() {
