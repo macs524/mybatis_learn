@@ -15,22 +15,17 @@
  */
 package org.apache.ibatis.datasource.pooled;
 
-import java.io.PrintWriter;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Properties;
-import java.util.logging.Logger;
-
-import javax.sql.DataSource;
-
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
 import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
+
+import javax.sql.DataSource;
+import java.io.PrintWriter;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.sql.*;
+import java.util.Properties;
+import java.util.logging.Logger;
 
 /**
  * This is a simple, synchronous, thread-safe database connection pool.
@@ -366,8 +361,8 @@ public class PooledDataSource implements DataSource {
 
   /**
    * 从池中获取一个连接。
-   * @param username
-   * @param password
+   * @param username 用户名
+   * @param password 密码
    * @return
    * @throws SQLException
    */
@@ -436,6 +431,8 @@ public class PooledDataSource implements DataSource {
             }
           }
         }
+
+
         if (conn != null) {
           if (conn.isValid()) {
             if (!conn.getRealConnection().getAutoCommit()) {
@@ -462,7 +459,7 @@ public class PooledDataSource implements DataSource {
             }
           }
         }
-      }
+      }//syncnized
 
     }
 

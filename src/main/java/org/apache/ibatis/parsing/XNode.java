@@ -49,7 +49,7 @@ public class XNode {
   private final XPathParser xpathParser;
 
   /**
-   * 创建一个XNode
+   * 惟一的构造函数
    * @param xpathParser 解析器
    * @param node 节点
    * @param variables //初始化时的属性配置，可以认为是NULL
@@ -63,25 +63,39 @@ public class XNode {
     this.body = parseBody(node); //存储其子节点的文本值，如果有的话。
   }
 
+    /**
+     * 将一个普通的NODE转化为XNODE
+     * @param node node
+     * @return 结果
+     */
   public XNode newXNode(Node node) {
     return new XNode(xpathParser, node, variables);
   }
 
+    /**
+     * 查找当前结点的父节点
+     * @return 父节点
+     */
   public XNode getParent() {
     Node parent = node.getParentNode();
     if (parent == null || !(parent instanceof Element)) {
       return null;
     } else {
-      return new XNode(xpathParser, parent, variables);
+        return newXNode(parent);
+      //return new XNode(xpathParser, parent, variables);
     }
   }
 
+    /**
+     * 查找当前节点的完全路径.
+     * @return 路径
+     */
   public String getPath() {
     StringBuilder builder = new StringBuilder();
     Node current = node;
     while (current != null && current instanceof Element) {
       if (current != node) {
-        builder.insert(0, "/");
+        builder.insert(0, "/"); // 当前节点不添加 /
       }
       builder.insert(0, current.getNodeName());
       current = current.getParentNode();
@@ -89,6 +103,11 @@ public class XNode {
     return builder.toString();
   }
 
+    /**
+     * 这个和getPath有点像,只是节点之前不再是用/, 而是用_
+     * 另外, 如果某个节点有id/value/property 三者之一的属性, 用[]括起来表示.
+     * @return 路径值.
+     */
   public String getValueBasedIdentifier() {
     StringBuilder builder = new StringBuilder();
     XNode current = this;
@@ -96,17 +115,20 @@ public class XNode {
       if (current != this) {
         builder.insert(0, "_");
       }
+
+        //三个特殊的属性 id/value/property
       String value = current.getStringAttribute("id",
           current.getStringAttribute("value",
               current.getStringAttribute("property", null)));
       if (value != null) {
+          // 如果有ID, 将ID用[]存起来
         value = value.replace('.', '_');
         builder.insert(0, "]");
         builder.insert(0,
             value);
         builder.insert(0, "[");
       }
-      builder.insert(0, current.getName());
+      builder.insert(0, current.getName()); // 当前节点的名称
       current = current.getParent();
     }
     return builder.toString();
@@ -310,14 +332,20 @@ public class XNode {
     }
   }
 
+    /**
+     * 查找访节点的所有一级子节点
+     * @return 子节点列表
+     */
   public List<XNode> getChildren() {
-    List<XNode> children = new ArrayList<XNode>();
+    List<XNode> children = new ArrayList<>();
     NodeList nodeList = node.getChildNodes();
     if (nodeList != null) {
       for (int i = 0, n = nodeList.getLength(); i < n; i++) {
         Node node = nodeList.item(i);
         if (node.getNodeType() == Node.ELEMENT_NODE) {
-          children.add(new XNode(xpathParser, node, variables));
+            // 如果节点是元素类型,则将其转化为子节点.
+            children.add(newXNode(node));
+          //children.add(new XNode(xpathParser, node, variables));
         }
       }
     }
@@ -325,7 +353,19 @@ public class XNode {
   }
 
   /**
-   * 获取子节点的属性值
+   * 将子节点转化为属性对象, 本身是一个Hashtable.
+   * 这个适用的场景是某个节点下的子节点都是属性节点,示例如下:
+   *
+   * <bean id='xxx' class='com.jd.macs.XxxBean'>
+   *     <property name='id' value='def' />
+   *     <property name='name' value='xxxName' />
+   * </bean>
+   *
+   * 但是要注意的是, 从方法的实现上看, name和value是取的该节点的属性.
+   * 对于<property name='theName'>theVal</property>来说,
+   * theVal 相当于是一个类型为TEXT的子节点,而不是其父节点的value属性.
+   * 所以, 这种情况下, 这样配置是有问题的,不会被正确解析为一个属性对.
+   * 所以, 在mybatis的属性配置中,一定要将value作为属性去配置,而不是作为值.
    * @return 解析后的结果
    */
   public Properties getChildrenAsProperties() {
@@ -378,7 +418,7 @@ public class XNode {
   }
 
   /**
-   * 节点的属性信息
+   * 将一个节点的属性节点转化为Properties对象.
    * @param n 节点
    * @return 属性集
    */
@@ -448,3 +488,16 @@ public class XNode {
   }
 
 }
+/*
+* XNode 也就算是分析完了.
+*
+* 这个节点的主要功能如下:
+*
+* 1) 对原生节点进行包装, 计算其属性及节点体的内容
+* 2) 对父子节点进行封装为XNode
+* 3) 将子节点转化为Property
+* 4) 将某个节点转化为Property.
+* 5) 以该节点作为根节点, 对xpath表达式进行计算.
+*
+*
+* */

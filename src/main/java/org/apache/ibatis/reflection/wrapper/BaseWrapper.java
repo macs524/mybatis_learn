@@ -15,12 +15,12 @@
  */
 package org.apache.ibatis.reflection.wrapper;
 
-import java.util.List;
-import java.util.Map;
-
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.ReflectionException;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Clinton Begin
@@ -44,8 +44,9 @@ public abstract class BaseWrapper implements ObjectWrapper {
 
   protected Object getCollectionValue(PropertyTokenizer prop, Object collection) {
     if (collection instanceof Map) {
-      return ((Map) collection).get(prop.getIndex());
+      return ((Map) collection).get(prop.getIndex()); // 也就是说, map的key被当成下标来看待.
     } else {
+        //数组或者是List, 从目前来看,不能是set, 因为set无序. 没有办法通过下标来处理
       int i = Integer.parseInt(prop.getIndex());
       if (collection instanceof List) {
         return ((List) collection).get(i);
@@ -73,6 +74,12 @@ public abstract class BaseWrapper implements ObjectWrapper {
     }
   }
 
+    /**
+     * setter method, 和get方法对应.
+     * @param prop
+     * @param collection
+     * @param value
+     */
   protected void setCollectionValue(PropertyTokenizer prop, Object collection, Object value) {
     if (collection instanceof Map) {
       ((Map) collection).put(prop.getIndex(), value);

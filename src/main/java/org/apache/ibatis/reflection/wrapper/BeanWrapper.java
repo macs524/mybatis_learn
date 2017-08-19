@@ -15,16 +15,12 @@
  */
 package org.apache.ibatis.reflection.wrapper;
 
-import java.util.List;
-
-import org.apache.ibatis.reflection.ExceptionUtil;
-import org.apache.ibatis.reflection.MetaClass;
-import org.apache.ibatis.reflection.MetaObject;
-import org.apache.ibatis.reflection.ReflectionException;
-import org.apache.ibatis.reflection.SystemMetaObject;
+import org.apache.ibatis.reflection.*;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.reflection.invoker.Invoker;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
+
+import java.util.List;
 
 /**
  * @author Clinton Begin
@@ -37,15 +33,18 @@ public class BeanWrapper extends BaseWrapper {
   public BeanWrapper(MetaObject metaObject, Object object) {
     super(metaObject);
     this.object = object;
+      //创建元字段对象
     this.metaClass = MetaClass.forClass(object.getClass(), metaObject.getReflectorFactory());
   }
 
   @Override
   public Object get(PropertyTokenizer prop) {
     if (prop.getIndex() != null) {
+        //按集合处理
       Object collection = resolveCollection(prop, object);
       return getCollectionValue(prop, collection);
     } else {
+        //按普通方式处理
       return getBeanProperty(prop, object);
     }
   }
@@ -143,6 +142,15 @@ public class BeanWrapper extends BaseWrapper {
     }
   }
 
+    //初始化属性并返回一个MetaObject对象.
+
+    /**
+     * 设置某个属性的默认值
+     * @param name 属性名
+     * @param prop 对应的属性处理器
+     * @param objectFactory
+     * @return
+     */
   @Override
   public MetaObject instantiatePropertyValue(String name, PropertyTokenizer prop, ObjectFactory objectFactory) {
     MetaObject metaValue;
@@ -150,17 +158,24 @@ public class BeanWrapper extends BaseWrapper {
     try {
       Object newObject = objectFactory.create(type);
       metaValue = MetaObject.forObject(newObject, metaObject.getObjectFactory(), metaObject.getObjectWrapperFactory(), metaObject.getReflectorFactory());
-      set(prop, newObject);
+      set(prop, newObject); //
     } catch (Exception e) {
       throw new ReflectionException("Cannot set value of property '" + name + "' because '" + name + "' is null and cannot be instantiated on instance of " + type.getName() + ". Cause:" + e.toString(), e);
     }
     return metaValue;
   }
 
+    /**
+     * 获取bean的属性
+     * @param prop
+     * @param object
+     * @return
+     */
   private Object getBeanProperty(PropertyTokenizer prop, Object object) {
     try {
       Invoker method = metaClass.getGetInvoker(prop.getName());
       try {
+          //通过反射机制调用
         return method.invoke(object, NO_ARGUMENTS);
       } catch (Throwable t) {
         throw ExceptionUtil.unwrapThrowable(t);

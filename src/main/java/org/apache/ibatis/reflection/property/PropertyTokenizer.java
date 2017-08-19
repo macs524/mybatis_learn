@@ -26,18 +26,35 @@ public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
   private String index;
   private final String children;
 
+    /**
+     * 对属性表达式进行解析
+     * @param fullname fullname
+     */
   public PropertyTokenizer(String fullname) {
-    int delim = fullname.indexOf('.');
+
+      //假设待处理的表达式是item[0].order[0].data
+    int delim = fullname.indexOf('.'); // 首先判断是否有".",  如果没有"."
+      // 比如像theName, theName[1], theName['abc'], 这类形式
+      // 则name=fullname, children = 0.
+      // 如果有., 则第一个点之前的为name, 如本例name='item[0]', children = 'order[0].data'.
     if (delim > -1) {
       name = fullname.substring(0, delim);
-      children = fullname.substring(delim + 1);
+      children = fullname.substring(delim + 1); //如果children不等于NULL, 则hasNext()为true
+        //也就是说,只要有".", 那么就有next.
     } else {
       name = fullname;
       children = null;
     }
-    indexedName = name;
-    delim = name.indexOf('[');
+
+
+    indexedName = name; // indexedName, 表示未处理[]之前的
+      // 比如本例中,它就应该是'item[0]'.
+
+    delim = name.indexOf('['); // 判断是否有[]
     if (delim > -1) {
+        // 这个是假设在正常情况下,[]是成对出现的,且]为name的最后一个字符, 正常情况下也应该是这样.
+        // 那么这样处理之后, index 相当于是[]中间的部分'0', 当然也可能是一个其它的字符串
+        // 而name 则是去掉[]之后的值, 为'item'.
       index = name.substring(delim + 1, name.length() - 1);
       name = name.substring(0, delim);
     }
@@ -66,7 +83,8 @@ public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
 
   @Override
   public PropertyTokenizer next() {
-    return new PropertyTokenizer(children);
+      // 在使用之前一定要判断hasNext(), 要不然如果children是null, 就出问题了.
+    return new PropertyTokenizer(children); // 继续处理childeren.
   }
 
   @Override
