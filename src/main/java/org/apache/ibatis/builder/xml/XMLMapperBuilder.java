@@ -153,7 +153,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
     /**
-     * 这个属性终级解析了,也应该是最复杂的了.
+     * 这个属于语句解析,也应该是最复杂的了.
      * @param list 待处理的节点,可以是select,update, insert, delete. 没有其它节点了
      * @param requiredDatabaseId 需要的databaseId, 可以认为其就是NULL
      */
@@ -472,10 +472,10 @@ public class XMLMapperBuilder extends BaseBuilder {
       //对于这个节点来说,其子节点都是case子句,所以下面对于case子句进行处理
     for (XNode caseChild : context.getChildren()) {
         //对于case子句来说, 最重要的是就是value和 resultMap了.
-      String value = caseChild.getStringAttribute("value");
+      String value = caseChild.getStringAttribute("value"); //比如1
         //value是肯定有的, 但resultMap不一定会设置,假设简单的情况下, resultMap设置了, 则直接取其值
       String resultMap = caseChild.getStringAttribute("resultMap",
-              processNestedResultMappings(caseChild, resultMappings)); //否则还要继续解析.
+              processNestedResultMappings(caseChild, resultMappings)); //继续解析.
 
       discriminatorMap.put(value, resultMap); //总之最终是一个值和MAP名称的映射关系.
     }
@@ -557,8 +557,12 @@ public class XMLMapperBuilder extends BaseBuilder {
     String javaType = context.getStringAttribute("javaType"); //JAVA类型
     String jdbcType = context.getStringAttribute("jdbcType"); //JDBC的类型
     String nestedSelect = context.getStringAttribute("select"); //select子句,这个一般在一对多的时候能用到.
+      //上面是result/id/idArg/arg 这类节点有的内容,相对比较简单
 
+
+      // 下面是assocation和collection节点需要关注的内容, 以及case节点.
       //解析resultMap属性, 这个应该是很少能用到吧,暂时不分析
+      // assocition/collection 节点需要关注这个.
     String nestedResultMap = context.getStringAttribute("resultMap",
         processNestedResultMappings(context, Collections.<ResultMapping> emptyList()));
       //非空列?
