@@ -127,7 +127,7 @@ public class XMLMapperBuilder extends BaseBuilder {
       }
       builderAssistant.setCurrentNamespace(namespace); //这个一般情况下只会设置一次.
 
-      //2. 解析cache-ref节点
+        //2. 解析cache-ref节点
       cacheRefElement(context.evalNode("cache-ref"));
         //3. 解析cache
       cacheElement(context.evalNode("cache"));
@@ -257,7 +257,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   private void cacheElement(XNode context) throws Exception {
     if (context != null) {
 
-        //1. 缓存类型
+        //1. 缓存类型, 目前来说也只有这一个是具体的实现
       String type = context.getStringAttribute("type", "PERPETUAL");
         //由于使用的是别名,所以不用resolveClass, 直接使用别名查找
       Class<? extends Cache> typeClass = typeAliasRegistry.resolveAlias(type);

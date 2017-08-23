@@ -115,6 +115,17 @@ public class MapperBuilderAssistant extends BaseBuilder {
     }
   }
 
+  /**
+   * 根据各种参数创建缓存， 其实只有一个是缓存实现，其它都是装饰器
+   * @param typeClass  缓存实现类
+   * @param evictionClass 回收策略，默认LRU
+   * @param flushInterval 刷新间隔
+   * @param size 大小
+   * @param readWrite 是否可写
+   * @param blocking 是否阻塞
+   * @param props 属性
+   * @return
+   */
   public Cache useNewCache(Class<? extends Cache> typeClass,
       Class<? extends Cache> evictionClass,
       Long flushInterval,

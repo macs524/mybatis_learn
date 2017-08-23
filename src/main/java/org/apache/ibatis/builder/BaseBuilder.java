@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * 基础构造器
+ * 基础构造器, 主要是提供了一些基础功能，如枚举类型解析，别名查找，typeHandler查找等。
  * @author Clinton Begin
  */
 public abstract class BaseBuilder {

@@ -31,6 +31,7 @@ public class CacheRefResolver {
   }
 
   public Cache resolveCacheRef() {
+    //从引用中解析出cache
     return assistant.useCacheRef(cacheRefNamespace);
   }
 }
