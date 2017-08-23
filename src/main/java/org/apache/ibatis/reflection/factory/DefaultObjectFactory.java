@@ -15,33 +15,41 @@
  */
 package org.apache.ibatis.reflection.factory;
 
-import java.io.Serializable;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-
 import org.apache.ibatis.reflection.ReflectionException;
 
+import java.io.Serializable;
+import java.lang.reflect.Constructor;
+import java.util.*;
+
 /**
+ * 辅助的对象创建工厂
+ *
+ * 基于类的构造函数, 通过反射的方式来创建实例, 并不是通过Class.newInstance()
  * @author Clinton Begin
  */
 public class DefaultObjectFactory implements ObjectFactory, Serializable {
 
   private static final long serialVersionUID = -8855120656740914948L;
 
+    /**
+     * 创建对象, 使用无参构造函数
+     * @param type Object type
+     * @param <T>
+     * @return
+     */
   @Override
   public <T> T create(Class<T> type) {
     return create(type, null, null);
   }
 
+    /**
+     * 创建对象
+     * @param type Object type 类
+     * @param constructorArgTypes Constructor argument types 构造函数的参数类型
+     * @param constructorArgs Constructor argument values 构造函数对象的参数值
+     * @param <T> 泛型
+     * @return
+     */
   @SuppressWarnings("unchecked")
   @Override
   public <T> T create(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
@@ -59,18 +67,22 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
     try {
       Constructor<T> constructor;
       if (constructorArgTypes == null || constructorArgs == null) {
+          // 无参构造函数
         constructor = type.getDeclaredConstructor();
         if (!constructor.isAccessible()) {
           constructor.setAccessible(true);
         }
         return constructor.newInstance();
       }
+
+        // 指定参数的构造函数, 私有也不怕.
       constructor = type.getDeclaredConstructor(constructorArgTypes.toArray(new Class[constructorArgTypes.size()]));
       if (!constructor.isAccessible()) {
         constructor.setAccessible(true);
       }
       return constructor.newInstance(constructorArgs.toArray(new Object[constructorArgs.size()]));
     } catch (Exception e) {
+        // 有可能失败,比如如果type是一个接口的话,那肯定会创建不成功的.
       StringBuilder argTypes = new StringBuilder();
       if (constructorArgTypes != null && !constructorArgTypes.isEmpty()) {
         for (Class<?> argType : constructorArgTypes) {
@@ -91,6 +103,11 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
     }
   }
 
+    /**
+     * 对集合类接口进行转换
+     * @param type class
+     * @return
+     */
   protected Class<?> resolveInterface(Class<?> type) {
     Class<?> classToCreate;
     if (type == List.class || type == Collection.class || type == Iterable.class) {
@@ -102,7 +119,7 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
     } else if (type == Set.class) {
       classToCreate = HashSet.class;
     } else {
-      classToCreate = type;
+      classToCreate = type; // 如果是其它类型的接口,不转换
     }
     return classToCreate;
   }

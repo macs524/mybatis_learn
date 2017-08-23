@@ -42,6 +42,7 @@ public class ParameterExpression extends HashMap<String, String> {
   private void parse(String expression) {
     int p = skipWS(expression, 0);
     if (expression.charAt(p) == '(') {
+        //跳过括号
       expression(expression, p + 1);
     } else {
       property(expression, p);
@@ -71,6 +72,12 @@ public class ParameterExpression extends HashMap<String, String> {
     }
   }
 
+    /**
+     * 过滤空白字符, 找到第一个非空节点
+     * @param expression
+     * @param p
+     * @return
+     */
   private int skipWS(String expression, int p) {
     for (int i = p; i < expression.length(); i++) {
       if (expression.charAt(i) > 0x20) {

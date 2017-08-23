@@ -15,17 +15,13 @@
  */
 package org.apache.ibatis.reflection;
 
+import org.apache.ibatis.reflection.factory.ObjectFactory;
+import org.apache.ibatis.reflection.property.PropertyTokenizer;
+import org.apache.ibatis.reflection.wrapper.*;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.ibatis.reflection.factory.ObjectFactory;
-import org.apache.ibatis.reflection.property.PropertyTokenizer;
-import org.apache.ibatis.reflection.wrapper.BeanWrapper;
-import org.apache.ibatis.reflection.wrapper.CollectionWrapper;
-import org.apache.ibatis.reflection.wrapper.MapWrapper;
-import org.apache.ibatis.reflection.wrapper.ObjectWrapper;
-import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
  * @author Clinton Begin
@@ -112,10 +108,12 @@ public class MetaObject {
   public Object getValue(String name) {
     PropertyTokenizer prop = new PropertyTokenizer(name);
     if (prop.hasNext()) {
+        //indexedName 应该是表示包含下标的名字.
       MetaObject metaValue = metaObjectForProperty(prop.getIndexedName());
       if (metaValue == SystemMetaObject.NULL_META_OBJECT) {
         return null;
       } else {
+          //递归调用
         return metaValue.getValue(prop.getChildren());
       }
     } else {
@@ -141,9 +139,16 @@ public class MetaObject {
     }
   }
 
+    /**
+     * 解析index.
+     * @param name
+     * @return
+     */
   public MetaObject metaObjectForProperty(String name) {
-    Object value = getValue(name);
-    return MetaObject.forObject(value, objectFactory, objectWrapperFactory, reflectorFactory);
+    return MetaObject.forObject(getValue(name),
+            objectFactory,
+            objectWrapperFactory,
+            reflectorFactory);
   }
 
   public ObjectWrapper getObjectWrapper() {

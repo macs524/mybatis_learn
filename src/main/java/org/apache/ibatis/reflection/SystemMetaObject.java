@@ -37,6 +37,7 @@ public final class SystemMetaObject {
   }
 
   public static MetaObject forObject(Object object) {
+      // 一个简单的封装,还是使用了MetaObject.
     return MetaObject.forObject(object, DEFAULT_OBJECT_FACTORY, DEFAULT_OBJECT_WRAPPER_FACTORY, new DefaultReflectorFactory());
   }
 

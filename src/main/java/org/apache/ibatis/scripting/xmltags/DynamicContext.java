@@ -37,6 +37,9 @@ public class DynamicContext {
     OgnlRuntime.setPropertyAccessor(ContextMap.class, new ContextAccessor());
   }
 
+    /**
+     * 这是一个参数Map,应该是存储了用户提供的参数,并且这个会作为OGNL表达式的root对象
+     */
   private final ContextMap bindings;
   private final StringBuilder sqlBuilder = new StringBuilder();
   private int uniqueNumber = 0;

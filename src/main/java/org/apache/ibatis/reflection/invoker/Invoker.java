@@ -18,6 +18,7 @@ package org.apache.ibatis.reflection.invoker;
 import java.lang.reflect.InvocationTargetException;
 
 /**
+ * 典型的适配器模式
  * @author Clinton Begin
  */
 public interface Invoker {

@@ -73,6 +73,9 @@ public class SqlSourceBuilder extends BaseBuilder {
 
     @Override
     public String handleToken(String content) {
+        //这里的content应该就是#{}里的内容,很可能只是一个变量名
+        //比如#{id}, 也有可能还包含了其它信息,比如 #{id, javaType=int, jdbcType=INTEGER}类似的形式.
+
       parameterMappings.add(buildParameterMapping(content));
       return "?"; //直接返回?
     }
@@ -83,6 +86,7 @@ public class SqlSourceBuilder extends BaseBuilder {
        * @return 参数映射
        */
     private ParameterMapping buildParameterMapping(String content) {
+        //所以这里把#{}里的字符串要转化为Map
       Map<String, String> propertiesMap = parseParameterMapping(content);
       String property = propertiesMap.get("property");
 

@@ -15,24 +15,83 @@
  */
 package org.apache.ibatis.reflection;
 
-import static org.junit.Assert.*;
-
-import java.io.Serializable;
-import java.util.List;
-
+import org.apache.ibatis.reflection.invoker.Invoker;
 import org.junit.Assert;
 import org.junit.Test;
-import static com.googlecode.catchexception.apis.BDDCatchException.*;
+
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.googlecode.catchexception.apis.BDDCatchException.caughtException;
+import static com.googlecode.catchexception.apis.BDDCatchException.when;
 import static org.assertj.core.api.BDDAssertions.then;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ReflectorTest {
+
+
+    @Test
+    public void testClass(){
+        Class cls = Entity.class;
+
+        // get name
+        print(cls.getSimpleName());
+        print(cls.getName());
+        print(cls.getCanonicalName());
+
+        // get interface
+        print(cls.toGenericString());
+
+        Map<String, String> map = new HashMap<>();
+
+        print(map.getClass().getTypeName());
+
+    }
+
+    private void print(Object obj){
+
+        System.out.println(obj);
+    }
 
   @Test
   public void testGetSetterType() throws Exception {
     ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
-    Reflector reflector = reflectorFactory.findForClass(Section.class);
-    Assert.assertEquals(Long.class, reflector.getSetterType("id"));
+    Reflector reflector = null;
+//      reflectorFactory.findForClass(Section.class);
+//    Assert.assertEquals(Long.class, reflector.getSetterType("id"));
+//
+//      Method  m = reflector.getClass().getDeclaredMethod("canAccessPrivateMethods");
+//      m.setAccessible(true);
+//      System.out.println(m.invoke(null));
+//
+//    Assert.assertTrue(reflector.hasGetter("def"));
+//      Assert.assertTrue(reflector.hasGetter("ABC"));
+//      Assert.assertTrue(reflector.hasGetter("abC"));
+
+      reflector = reflectorFactory.findForClass(TestObj.class);
+
+
+
+      Invoker method = reflector.getGetInvoker("abc");
   }
+
+    static class TestObj {
+
+        public boolean isOk(){
+            return false;
+        }
+
+        public int getOk(){
+            return 0;
+        }
+    }
+
+
+
+
 
   @Test
   public void testGetGetterType() throws Exception {
@@ -69,6 +128,18 @@ public class ReflectorTest {
   }
 
   static class Section extends AbstractEntity implements Entity<Long> {
+
+      public String getABC(){
+          return "abc";
+      }
+
+      public String getDef(){
+          return "def";
+      }
+
+      public String getAbC(){
+          return "abc";
+      }
   }
 
   @Test
