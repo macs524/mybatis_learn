@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * SQL解析器，主要来解析SQL中的#{}？
+ *
  * @author Clinton Begin
  */
 public class SqlSourceBuilder extends BaseBuilder {
@@ -40,21 +42,30 @@ public class SqlSourceBuilder extends BaseBuilder {
     }
 
     /**
-     * 解析处理
+     * 解析处理， 无论是动态SQL，还是静态SQL，都需要调用这个方法来处理
      * @param originalSql 原始SQL
      * @param parameterType 参数类型
-     * @param additionalParameters 附加参数
+     * @param additionalParameters 附加参数， 这有可能是一个空参数，比如以RawSqlSource来说
      * @return 解析结果, 最终得到一个静态的SqlSource
      */
     public SqlSource parse(String originalSql, Class<?> parameterType, Map<String, Object> additionalParameters) {
+
+        //1. 构造一个参数解析器，用于处理变量表达式#{}
         ParameterMappingTokenHandler handler = new ParameterMappingTokenHandler(configuration, parameterType, additionalParameters);
+
+        //2. 负责找到这样的表达式
         GenericTokenParser parser = new GenericTokenParser("#{", "}", handler);
+
+        //3. 执行解后的操作， 这个SQL中的#{}将不复存在，而是会被替换成?， 那么这个SQL是可以直接被执行的。
         String sql = parser.parse(originalSql);
 
-        //这个时候, sql 中会将 #{}直接转化为?
+        //4. 返回一个静态的SqlSource
         return new StaticSqlSource(configuration, sql, handler.getParameterMappings());
     }
 
+    /**
+     * 静态内部类，其主要作用在于解析SQL中的变量
+     * */
     private static class ParameterMappingTokenHandler extends BaseBuilder implements TokenHandler {
 
         private List<ParameterMapping> parameterMappings = new ArrayList<ParameterMapping>();
@@ -76,12 +87,17 @@ public class SqlSourceBuilder extends BaseBuilder {
             //这里的content应该就是#{}里的内容,很可能只是一个变量名
             //比如#{id}, 也有可能还包含了其它信息,比如 #{id, javaType=int, jdbcType=INTEGER}类似的形式.
 
+            //重点是了为解析参数，并将解析后的添加到parameterMappings中去。
             parameterMappings.add(buildParameterMapping(content));
+
             return "?"; //直接返回?
         }
 
         /**
          * 根据变量名构造出一个ParameterMapping.
+         * content就是类似于#{}里的部分，可能是一个简单的#{id}, 也可能是一个复杂的#{id, javaType=xx, jdbcType=xxx} 这种形式
+         *
+         * 而这个方法的作用，就是把一个文本通过解析，转化为一个ParameterMapping对象
          * @param content 变量名
          * @return 参数映射
          */

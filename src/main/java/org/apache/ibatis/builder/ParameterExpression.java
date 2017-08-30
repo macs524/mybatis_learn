@@ -29,6 +29,8 @@ import java.util.HashMap;
  * attribute = name '=' value
  * </pre>
  *
+ * 参数表达式
+ *
  * @author Frank D. Martinez [mnesarco]
  */
 public class ParameterExpression extends HashMap<String, String> {
@@ -42,7 +44,7 @@ public class ParameterExpression extends HashMap<String, String> {
   private void parse(String expression) {
     int p = skipWS(expression, 0);
     if (expression.charAt(p) == '(') {
-        //跳过括号
+        //以括号开头为表达式，否则为属性
       expression(expression, p + 1);
     } else {
       property(expression, p);
@@ -64,6 +66,11 @@ public class ParameterExpression extends HashMap<String, String> {
     jdbcTypeOpt(expression, right);
   }
 
+  /**
+   * 按属性进行解析
+   * @param expression 表达式
+   * @param left
+   */
   private void property(String expression, int left) {
     if (left < expression.length()) {
       int right = skipUntil(expression, left, ",:");
