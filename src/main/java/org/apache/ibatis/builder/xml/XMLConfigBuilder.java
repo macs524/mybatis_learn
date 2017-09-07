@@ -119,8 +119,9 @@ public class XMLConfigBuilder extends BaseBuilder {
   }
 
   /**
-   * 执行解析过程
-   * @param root 根节点
+   * 从指定节点开始解析， 其实也只有一次调用，这个指定节点就是根节点
+   * 但是方法拆分后还是要清晰一些，值得学习
+   * @param root 根节点， 也就是configuration 节点
    */
   private void parseConfiguration(XNode root) {
     try {
@@ -220,7 +221,7 @@ public class XMLConfigBuilder extends BaseBuilder {
           //遍历其所有子节点,所以别名可以定义多个,也可以混合使用
         if ("package".equals(child.getName())) {
           String typeAliasPackage = child.getStringAttribute("name");
-          configuration.getTypeAliasRegistry().registerAliases(typeAliasPackage);
+          typeAliasRegistry.registerAliases(typeAliasPackage);
         } else {
             //这种方式比较简单,可以不指定别名,但类型一定要指定
           String alias = child.getStringAttribute("alias");
@@ -513,7 +514,7 @@ public class XMLConfigBuilder extends BaseBuilder {
      */
   private TransactionFactory transactionManagerElement(XNode context) throws Exception {
     if (context != null) {
-      String type = context.getStringAttribute("type");
+      String type = context.getStringAttribute("type");  //主要还是根据类型
       Properties props = context.getChildrenAsProperties();
       TransactionFactory factory = (TransactionFactory) resolveClass(type).newInstance();
       factory.setProperties(props);
@@ -619,7 +620,7 @@ public class XMLConfigBuilder extends BaseBuilder {
 
     /**
      * 对于mapper的解析, 由于mapper 中的属性是XML文件路径, 而mapper文件的定义相当复杂,所以
-     * 这个节点的解析也会跟着变昨比较复杂.
+     * 这个节点的解析也会跟着变得比较复杂.
      *
      * 定义如下:
          <mappers>
