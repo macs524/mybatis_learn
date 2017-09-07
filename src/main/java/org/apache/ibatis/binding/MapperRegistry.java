@@ -1,17 +1,17 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Copyright 2009-2015 the original author or authors.
+ * <p>
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.ibatis.binding;
 
@@ -33,99 +33,101 @@ import java.util.Set;
  */
 public class MapperRegistry {
 
-  private final Configuration config;
-  private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<Class<?>, MapperProxyFactory<?>>();
+    private final Configuration config;
+    private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<Class<?>, MapperProxyFactory<?>>();
 
-  public MapperRegistry(Configuration config) {
-    this.config = config;
-  }
-
-  /**
-   * 创建一个Mapper接口的实例
-   * @param type 类型
-   * @param sqlSession sqlSession
-   * @param <T> 泛型
-   * @return Mapper实例
-   */
-  @SuppressWarnings("unchecked")
-  public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
-
-    //从SET中查找是否已经有该Mapper类型，如果没有的话，则直接报错。
-    final MapperProxyFactory<T> mapperProxyFactory = (MapperProxyFactory<T>) knownMappers.get(type);
-    if (mapperProxyFactory == null) {
-      throw new BindingException("Type " + type + " is not known to the MapperRegistry.");
+    public MapperRegistry(Configuration config) {
+        this.config = config;
     }
-    try {
-      // 创建一个Mapper实例
-      return mapperProxyFactory.newInstance(sqlSession);
-    } catch (Exception e) {
-      throw new BindingException("Error getting mapper instance. Cause: " + e, e);
-    }
-  }
-  
-  public <T> boolean hasMapper(Class<T> type) {
-    return knownMappers.containsKey(type);
-  }
 
     /**
-     *  终极添加Mapper的方法
-     * @param type
+     * 创建一个Mapper接口的实例
+     * @param type 类型
+     * @param sqlSession sqlSession
+     * @param <T> 泛型
+     * @return Mapper实例
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
+
+        //从SET中查找是否已经有该Mapper类型，如果没有的话，则直接报错。
+        final MapperProxyFactory<T> mapperProxyFactory = (MapperProxyFactory<T>) knownMappers.get(type);
+        if (mapperProxyFactory == null) {
+            throw new BindingException("Type " + type + " is not known to the MapperRegistry.");
+        }
+        try {
+            // 创建一个Mapper实例
+            return mapperProxyFactory.newInstance(sqlSession);
+        } catch (Exception e) {
+            throw new BindingException("Error getting mapper instance. Cause: " + e, e);
+        }
+    }
+
+    public <T> boolean hasMapper(Class<T> type) {
+        return knownMappers.containsKey(type);
+    }
+
+    /**
+     *  添加Mapper文件到knownMappers 中去
+     *  但不是一个简单的put操作
+     * @param type 类型
      * @param <T>
      */
-  public <T> void addMapper(Class<T> type) {
-    if (type.isInterface()) {
-        //只处理接口
-      if (hasMapper(type)) {
-          //Mappper不能重复添加
-        throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
-      }
-      boolean loadCompleted = false;
-      try {
-          //添加一个
-        knownMappers.put(type, new MapperProxyFactory<T>(type));
-        // It's important that the type is added before the parser is run
-        // otherwise the binding may automatically be attempted by the
-        // mapper parser. If the type is already known, it won't try.
-        MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
-        parser.parse(); //并基于注解解析
+    public <T> void addMapper(Class<T> type) {
 
-          //解析完毕.
-        loadCompleted = true;
-      } finally {
-        if (!loadCompleted) {
-            //如果解析不成功,移除这个Mapper
-          knownMappers.remove(type);
+        if (type.isInterface()) {
+            // 只有当前为接口时才有意义
+            if (hasMapper(type)) {
+                //Mappper不能重复添加
+                throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
+            }
+            boolean loadCompleted = false;
+            try {
+                //添加一个
+                knownMappers.put(type, new MapperProxyFactory<T>(type));
+                // It's important that the type is added before the parser is run
+                // otherwise the binding may automatically be attempted by the
+                // mapper parser. If the type is already known, it won't try.
+                MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
+                parser.parse(); //并基于注解解析
+
+                //解析完毕.
+                loadCompleted = true;
+            } finally {
+                if (!loadCompleted) {
+                    //如果解析不成功,移除这个Mapper
+                    knownMappers.remove(type);
+                }
+            }
         }
-      }
     }
-  }
 
-  /**
-   * @since 3.2.2
-   */
-  public Collection<Class<?>> getMappers() {
-    return Collections.unmodifiableCollection(knownMappers.keySet());
-  }
-
-  /**
-   * 按包名查找该包下所有Object的子类,并依次处理它们
-   * @since 3.2.2
-   */
-  public void addMappers(String packageName, Class<?> superType) {
-    ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<Class<?>>();
-    resolverUtil.find(new ResolverUtil.IsA(superType), packageName);
-    Set<Class<? extends Class<?>>> mapperSet = resolverUtil.getClasses();
-    for (Class<?> mapperClass : mapperSet) {
-      addMapper(mapperClass);
+    /**
+     * @since 3.2.2
+     */
+    public Collection<Class<?>> getMappers() {
+        return Collections.unmodifiableCollection(knownMappers.keySet());
     }
-  }
 
-  /**
-   * 按包名添加
-   * @since 3.2.2
-   */
-  public void addMappers(String packageName) {
-    addMappers(packageName, Object.class);
-  }
-  
+    /**
+     * 按包名查找该包下所有Object的子类,并依次处理它们
+     * @since 3.2.2
+     */
+    public void addMappers(String packageName, Class<?> superType) {
+        ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<Class<?>>();
+        resolverUtil.find(new ResolverUtil.IsA(superType), packageName);
+        Set<Class<? extends Class<?>>> mapperSet = resolverUtil.getClasses();
+        for (Class<?> mapperClass : mapperSet) {
+            addMapper(mapperClass);
+        }
+    }
+
+    /**
+     * 按包名添加
+     * @since 3.2.2
+     */
+    public void addMappers(String packageName) {
+        addMappers(packageName, Object.class);
+    }
+
 }
