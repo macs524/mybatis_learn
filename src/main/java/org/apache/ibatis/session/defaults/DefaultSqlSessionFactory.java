@@ -15,21 +15,17 @@
  */
 package org.apache.ibatis.session.defaults;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
 import org.apache.ibatis.exceptions.ExceptionFactory;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.Environment;
-import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.session.ExecutorType;
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.session.TransactionIsolationLevel;
+import org.apache.ibatis.session.*;
 import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.transaction.managed.ManagedTransactionFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * @author Clinton Begin
@@ -88,7 +84,7 @@ public class DefaultSqlSessionFactory implements SqlSessionFactory {
   }
 
   /**
-   * 创建一个Session, 这是执行SQL的第一部
+   * 创建一个Session, 这是执行SQL的第一步
    * @param execType 执行器，从配置对象中获取，这是一个枚举类型，默认情况下，应该是SIMPLE
    * @param level 事务隔离级别，默认调用为NULL
    * @param autoCommit 是否自动提交， 如果是直接调用openSession()的话，自动提交是null， 所以这就是为什么每次都要commit的原因
