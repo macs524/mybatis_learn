@@ -35,6 +35,11 @@ public class SqlSessionFactoryBuilder {
      return build(new XMLConfigBuilder(reader, environment, properties), reader);
   }
 
+  /**
+   * 根据输入流进行构造，通常情况下，这个输入流对象代表了对应的配置文件
+   * @param inputStream 输入流
+   * @return sqlSessionFactory
+   */
   public SqlSessionFactory build(InputStream inputStream) {
     return build(inputStream, null, null);
   }

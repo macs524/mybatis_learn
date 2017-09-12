@@ -75,6 +75,9 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
 import java.util.*;
 
 /**
+ *
+ * 这个对象是最全的配置对象， 一部分配置是初始化为默认值，一部分可以在配置文件中指定
+ *
  * @author Clinton Begin
  */
 public class Configuration {
@@ -104,14 +107,23 @@ public class Configuration {
     protected Class<? extends VFS> vfsImpl;
     protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
     protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
-    protected Set<String> lazyLoadTriggerMethods = new HashSet<String>(Arrays.asList(new String[]{"equals", "clone", "hashCode", "toString"}));
+
+    //延迟加载要处理的方法？
+    protected Set<String> lazyLoadTriggerMethods =
+            new HashSet<String>(Arrays.asList(new String[]{"equals", "clone", "hashCode", "toString"}));
     /**
-     * 默认超时时间
+     * 默认超时时间，这个没有默认值
      */
     protected Integer defaultStatementTimeout;
     protected Integer defaultFetchSize;
     protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;
+    /**
+     * 默认映射关系
+     */
     protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;
+    /**
+     * 默认自动映射时，遇到未知列时的处理方式
+     */
     protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;
 
     protected Properties variables = new Properties();
