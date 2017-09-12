@@ -75,6 +75,12 @@ public class VendorDatabaseIdProvider implements DatabaseIdProvider {
     return productName;
   }
 
+  /**
+   * 根据数据源获取其对应的databaseId.
+   * @param dataSource 数据源
+   * @return
+   * @throws SQLException
+   */
   private String getDatabaseProductName(DataSource dataSource) throws SQLException {
     Connection con = null;
     try {

@@ -337,7 +337,7 @@ public class XNode {
      * @return 子节点列表
      */
   public List<XNode> getChildren() {
-    List<XNode> children = new ArrayList<>();
+    List<XNode> children = new ArrayList<XNode>();
     NodeList nodeList = node.getChildNodes();
     if (nodeList != null) {
       for (int i = 0, n = nodeList.getLength(); i < n; i++) {
